@@ -17,7 +17,6 @@ This directory contains the build tools required for the ebsrc project.
 ## Notes
 
 - These tools are built locally and not included in version control
-- The `tools/` directory is ignored in `.gitignore`
 - The Makefile references these tools with `./tools/toolname`
 
 ## Rebuilding Tools
