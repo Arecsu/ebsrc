@@ -1,0 +1,110 @@
+#ifndef STRUCTS_H
+#define STRUCTS_H
+
+// Fixed point number
+typedef struct {
+    unsigned short fraction;  // 0
+    unsigned short integer;   // 2
+} fixed_point;
+
+// 2D coordinates
+typedef struct {
+    unsigned short x_coord;   // 0
+    unsigned short y_coord;   // 2
+} coords;
+
+#define AFFLICTION_GROUP_COUNT 7
+
+// Character structure
+typedef struct {
+#ifdef JPN
+    unsigned char name[4];    // 0
+#else
+    unsigned char name[5];    // 0
+#endif
+    unsigned char level;      // 5
+    unsigned long exp;        // 6
+    unsigned short max_hp;    // 10
+    unsigned short max_pp;    // 12
+    unsigned char afflictions[AFFLICTION_GROUP_COUNT]; // 14
+    unsigned char offense;    // 21
+    unsigned char defense;    // 22
+    unsigned char speed;      // 23
+    unsigned char guts;       // 24
+    unsigned char luck;       // 25
+    unsigned char vitality;   // 26
+    unsigned char iq;         // 27
+    unsigned char base_offense;  // 28
+    unsigned char base_defense;  // 29
+    unsigned char base_speed;    // 30
+    unsigned char base_guts;     // 31
+    unsigned char base_luck;     // 32
+    unsigned char base_vitality; // 33
+    unsigned char base_iq;       // 34
+    unsigned char items[14];     // 35
+    unsigned char equipment[4];  // 49
+    unsigned short unknown53;    // 53
+    unsigned short unknown55;    // 55
+    unsigned short unknown57;    // 57
+    unsigned short unknown59;    // 59
+    unsigned short position_index; // 61
+    unsigned short unknown63;    // 63
+    unsigned short unknown65;    // 65
+    unsigned short current_hp_fraction; // 67
+    unsigned short current_hp;   // 69
+} char_struct;
+
+// Equipment slot constants
+typedef enum {
+    WEAPON = 0,
+    BODY = 1,
+    ARMS = 2,
+    OTHER = 3
+} EQUIPMENT_SLOT;
+
+// Active hotspot structure
+typedef struct {
+    unsigned short mode;
+    // Additional hotspot fields TBD
+} active_hotspot;
+
+// Global game state structure (partial)
+typedef struct {
+    unsigned long money_carried;
+    unsigned long bank_balance;
+    unsigned char party_status;
+    unsigned char walking_style;
+    unsigned char active_hotspot_modes[32];  // Array size TBD
+} game_state;
+
+// Constants
+#define FALSE 0
+#define TRUE 1
+#define ATM_ACCOUNT_LIMIT 999999
+#define ENTITY_COLLISION_NO_OBJECT 0
+#define ENTITY_COLLISION_DISABLED 0xFF
+
+// External global variables
+extern char_struct PARTY_CHARACTERS[4];
+extern game_state GAME_STATE;
+extern unsigned char __BSS_START__[];
+extern active_hotspot ACTIVE_HOTSPOTS[32];  // Array size TBD
+extern unsigned short ENTITY_COLLIDED_OBJECTS[256];  // Array size TBD
+extern unsigned short CURRENT_ENTITY_INDEX;
+extern unsigned char PARTY_MEMBER_TARGET;
+
+// Battle system structures
+typedef struct {
+    unsigned char id;
+    unsigned short hp_current;
+    unsigned short hp_max;
+    unsigned short pp_current;
+    unsigned short pp_max;
+    unsigned short pp_target;
+    unsigned short offense;
+    unsigned short defense;
+    unsigned char fire_resist;
+    // More fields TBD
+} battler;
+
+#endif

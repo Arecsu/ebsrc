@@ -51,19 +51,6 @@ USOBJS = $(subst $(SRCDIR), $(BUILDDIR), $(patsubst %.asm, %.o, $(USSRCS)))
 USPROTOSRCS = $(wildcard $(SRCDIR)/$(USPROTOID)/*.asm)
 USPROTOOBJS = $(subst $(SRCDIR), $(BUILDDIR), $(patsubst %.asm, %.o, $(USPROTOSRCS)))
 
-# C compilation support
-CC65FLAGS = -t none --cpu 65816 -I include -I src --include-dir include
-
-# Core C source files
-C_SRCS = $(wildcard src/*.c)
-C_ASMS = $(C_SRCS:.c=.s)
-C_OBJS = $(C_ASMS:.s=.o)
-
-# Include C-generated object files in the main build
-USOBJS += $(C_OBJS)
-JPOBJS += $(C_OBJS)
-USPROTOOBJS += $(C_OBJS)
-
 $(BUILDDIR)/%.dep: $(SRCDIR)/%.asm
 	@$(call mkdir, $(@D))
 	ca65 $(CA65FLAGS) --listing "$(strip $(subst $(SRCDIR), $(BUILDDIR), $(patsubst %.dep,%.lst,$@)))" --create-dep "$(strip $(subst $(SRCDIR), $(BUILDDIR), $@))" -o "$(patsubst %.dep,%.o,$@)" "$<"
@@ -103,15 +90,6 @@ extractjp:
 $(BUILDDIR)/%.o: $(SRCDIR)/%.asm
 	@$(call mkdir, $(@D))
 	ca65 $(CA65FLAGS) --listing "$(strip $(subst $(SRCDIR), $(BUILDDIR), $(patsubst %.o,%.lst,$@)))" -o "$@" "$<"
-
-# C compilation rules - simple cc65 to ASM
-src/%.s: src/%.c
-	@$(call mkdir, $(@D))
-	cc65 $(CC65FLAGS) -o "$@" "$<"
-
-%.o: %.s
-	@$(call mkdir, $(@D))
-	ca65 $(CA65FLAGS) -o "$@" "$<"
 
 $(BUILDDIR)/%.spc700.bin: src/spc700/%.spc700.s
 	./tools/spcasm -f plain "$<" "$@"

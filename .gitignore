@@ -1,3 +1,10 @@
 bin
 *.cmd
 build/
+tools/ebbinex
+tools/spcasm
+*.sfc
+*.smc
+donor.sfc
+donorm2.sfc
+donor-1995-03-27.sfc
