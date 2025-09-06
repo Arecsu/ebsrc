@@ -23,5 +23,6 @@ extern void recalc_character_postmath_guts(unsigned short character);
 extern void recalc_character_postmath_luck(unsigned short character);
 extern void recalc_character_miss_rate(unsigned short character);
 extern void calc_resistances(unsigned short character);
+unsigned short check_item_equipped(unsigned char character_id, unsigned char item_slot);
 
 #endif

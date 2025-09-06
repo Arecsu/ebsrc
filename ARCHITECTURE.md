@@ -6,7 +6,7 @@ This document describes the architecture and design principles for converting th
 
 ## Project Goals
 
-- **Complete ASM→C conversion** of 3,708 assembly files  
+- **Complete ASM→C conversion** of 3,455 assembly files  
 - **Zero compilation warnings** with strict GCC flags
 - **Human-readable, maintainable code** without verbose ASM references
 - **Preserve original functionality** and behavior exactly

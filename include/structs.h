@@ -41,17 +41,22 @@ typedef struct {
     unsigned char base_luck;     // 32
     unsigned char base_vitality; // 33
     unsigned char base_iq;       // 34
-    unsigned char items[14];     // 35
-    unsigned char equipment[4];  // 49
-    unsigned short unknown53;    // 53
-    unsigned short unknown55;    // 55
-    unsigned short unknown57;    // 57
-    unsigned short unknown59;    // 59
-    unsigned short position_index; // 61
-    unsigned short unknown63;    // 63
-    unsigned short unknown65;    // 65
-    unsigned short current_hp_fraction; // 67
-    unsigned short current_hp;   // 69
+    unsigned char fire_resist;   // 35
+    unsigned char freeze_resist; // 36
+    unsigned char flash_resist;  // 37
+    unsigned char paralysis_resist; // 38
+    unsigned char hypnosis_brainshock_resist; // 39
+    unsigned char items[14];     // 40
+    unsigned char equipment[4];  // 54
+    unsigned short unknown58;    // 58
+    unsigned short unknown60;    // 60
+    unsigned short unknown62;    // 62
+    unsigned short unknown64;    // 64
+    unsigned short position_index; // 66
+    unsigned short unknown68;    // 68
+    unsigned short unknown70;    // 70
+    unsigned short current_hp_fraction; // 72
+    unsigned short current_hp;   // 74
 } char_struct;
 
 // Equipment slot constants
@@ -113,6 +118,16 @@ typedef struct {
     unsigned char ally_or_enemy; // Added missing field (0=ally, 1=enemy)
     unsigned char npc_id;        // Added missing field
     unsigned char current_action_argument; // Added missing field
+    unsigned char row;           // Party member row/index
+    unsigned char base_offense;  // Base stats without equipment bonuses
+    unsigned char base_defense;
+    unsigned char base_speed;
+    unsigned char base_luck;
+    unsigned char speed;         // Current stats with equipment
+    unsigned char luck;
+    unsigned char action_item_slot; // Item slot being used in action
+    unsigned char guts;          // Current guts stat
+    unsigned char base_guts;     // Base guts without equipment
     // More fields TBD
 } battler;
 

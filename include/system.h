@@ -38,5 +38,14 @@ unsigned short division16s(signed short dividend, signed short divisor);
 unsigned char modulus8(unsigned char dividend, unsigned char divisor);
 unsigned short rand_limit(unsigned short limit);
 unsigned short truncate_16_to_8(unsigned short value, unsigned short multiplier);
+short asr16(short value);
+short modulus16s(short dividend, short divisor);
+unsigned char rand_custom(void);
+char modulus8s(char dividend, char divisor);
+unsigned char asr8(unsigned char value, unsigned char shift_count);
+unsigned short asl16(unsigned short value, unsigned char shift_count);
+unsigned char division8s(char dividend, char divisor);
+unsigned char division8(char dividend, char divisor);
+void animate_palette(void);
 
 #endif

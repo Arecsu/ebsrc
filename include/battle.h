@@ -42,6 +42,20 @@ void btlact_big_bottle_rocket(void);
 void btlact_reduce_pp(void);
 void btlact_call_for_help(void);
 void btlact_pray_warm(void);
+void btlact_pray_golden(void);
+void btlact_crying2(void);
+void btlact_inflict_solidification(void);
+void btlact_defense_down_a(void);
+void btlact_switch_armor(void);
+void btlact_lifeup_b(void);
+void btlact_sow_seeds(void);
+void redirect_btlact_brainshock_a(void);
+void btlact_random_stat_up_1d4(void);
+void btlact_switch_weapons(void);
+void btlact_psi_fire_a(void);
+void btlact_psi_rockin_b(void);
+void redirect_btlact_psi_shield_b(void);
+void redirect_btlact_level_3_atk(void);
 
 // Forward declarations for external functions
 extern unsigned short twenty_five_percent_variance(unsigned short value);

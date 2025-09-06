@@ -4,7 +4,6 @@
 // Forward declarations for external functions
 extern unsigned short unknown_c0ac20(void);
 extern void unknown_c12e42(void);
-extern void load_spc700_data(unsigned char bank, unsigned short addr);
 extern unsigned char get_bank_from_ptr(unsigned char* ptr);
 
 // External global variables
@@ -181,4 +180,117 @@ void change_music(unsigned short track_id) {
         // Start playback
         unknown_c0abbd(pack_index + 1);
     }
+}
+
+// Load data to SPC700 audio processor
+void load_spc700_data(unsigned char bank, unsigned short addr) {
+    unsigned short spc_data_ptr_low = addr;
+    unsigned char spc_data_ptr_bank = bank;
+    unsigned short y_index = 0;
+    unsigned char temp_a;
+    unsigned short temp_x;
+    unsigned char nmitimen_backup;
+    
+    // Save current bank and direct page registers
+#ifndef TEST_COMPILATION
+    __asm__ volatile ("phb");
+    __asm__ volatile ("phd");
+    
+    // Set bank to 0 and direct page to 0  
+    __asm__ volatile ("pea $0000");
+    __asm__ volatile ("plb");
+    __asm__ volatile ("plb");
+    __asm__ volatile ("pea $0000");
+    __asm__ volatile ("pld");
+#endif
+    
+    // Check if SPC700 is ready (should be 0xBBAA)
+    if (*(volatile unsigned short*)APUIO0 != 0xBBAA) {
+        wait_for_spc700();
+    }
+    
+    // Disable NMI during transfer
+    nmitimen_backup = NMITIMEN_MIRROR;
+    NMITIMEN_MIRROR = nmitimen_backup & 0x7F;
+    *(volatile unsigned char*)NMITIMEN = NMITIMEN_MIRROR;
+    
+    temp_a = 0xCC;
+    
+    // Main data transfer loop
+    while (1) {
+        // Read block size from data
+        unsigned short block_size = *((volatile unsigned short*)((unsigned long)spc_data_ptr_bank << 16 | spc_data_ptr_low + y_index));
+        y_index += 2;
+        
+        if (block_size == 0) {
+            // End of data - send termination
+            temp_x = 0;
+            *(volatile unsigned short*)APUIO2 = 0x0500;
+        } else {
+            // Read target address
+            temp_x = block_size;
+            unsigned short target_addr = *((volatile unsigned short*)((unsigned long)spc_data_ptr_bank << 16 | spc_data_ptr_low + y_index));
+            y_index += 2;
+            *(volatile unsigned short*)APUIO2 = target_addr;
+        }
+        
+        // Set transfer mode in APUIO1
+        *(volatile unsigned char*)APUIO1 = (temp_x >= 1) ? 1 : 0;
+        temp_a += 0x7F;
+        if ((temp_a & 0x80) != 0) temp_a |= 0x80; // Keep bit 7 set
+        
+        // Start transfer
+        *(volatile unsigned char*)APUIO0 = temp_a;
+        
+        // Wait for SPC700 to acknowledge
+        while (*(volatile unsigned char*)APUIO0 != temp_a) {
+            // Wait loop
+        }
+        
+        if (block_size == 0) break; // End of data
+        
+        // Transfer data bytes
+        unsigned short data_byte;
+        for (unsigned short i = 0; i < temp_x; i++) {
+            data_byte = *((volatile unsigned char*)((unsigned long)spc_data_ptr_bank << 16 | spc_data_ptr_low + y_index));
+            y_index++;
+            
+            // Send byte and wait for acknowledgment
+            data_byte <<= 8; // Move to high byte
+            temp_a++;
+            *(volatile unsigned short*)APUIO0 = (data_byte | temp_a);
+            
+            // Wait for acknowledgment
+            while ((*(volatile unsigned char*)APUIO0) != temp_a) {
+                // Wait loop  
+            }
+        }
+        
+        // Wait for block transfer completion
+        while (*(volatile unsigned char*)APUIO0 == temp_a) {
+            // Wait for change
+        }
+        
+        // Check for completion signal
+        temp_a += 3;
+        while (temp_a == 0) {
+            // Wait for non-zero
+            temp_a += 3;
+        }
+    }
+    
+    // Wait for final completion  
+    while (*(volatile unsigned short*)APUIO0 != 0) {
+        // Wait for zero
+    }
+    
+    // Restore NMI
+    NMITIMEN_MIRROR = nmitimen_backup | 0x80;
+    *(volatile unsigned char*)NMITIMEN = NMITIMEN_MIRROR;
+    
+    // Restore registers
+#ifndef TEST_COMPILATION
+    __asm__ volatile ("pld");
+    __asm__ volatile ("plb");
+#endif
 }

@@ -15,6 +15,7 @@ extern unsigned short determine_dodge(void);
 extern void heal_strangeness(void);
 extern void display_battle_text_ptr(unsigned short msg_id);
 extern void btlact_level_2_atk(void);
+extern void btlact_level_3_atk(void);
 extern void psi_fire_common(unsigned short damage);
 extern void bottle_rocket_common(unsigned short count);
 extern void btlact_healing_a(void);
@@ -27,7 +28,7 @@ extern void flash_inflict_feeling_strange(void);
 extern void flash_inflict_crying(void);
 extern void weaken_shield(void);
 extern unsigned char success_speed(unsigned short threshold);
-extern void inflict_status_battle(unsigned char target, unsigned char status_group, unsigned char status);
+extern unsigned char inflict_status_battle(unsigned char target, unsigned char status_group, unsigned char status);
 extern void enable_blinking_triangle(unsigned char enabled);
 extern void clear_blinking_prompt(void);
 extern unsigned char unknown_c3ee14(unsigned char character_id, unsigned char item_slot);
@@ -35,8 +36,24 @@ extern void equip_item(unsigned char character_id, unsigned char item_slot);
 extern void calc_psi_dmg_modifiers(unsigned char base_resist);
 extern void calc_psi_res_modifiers(unsigned char base_resist);
 extern void btlact_psi_shield_a(void);
+extern void btlact_psi_shield_b(void);
 extern void btlact_hypnosis_a(void);
+extern void btlact_brainshock_a(void);
 extern unsigned char success_luck80(void);
+extern unsigned char success_255(unsigned char resistance);
+extern void hexadecimate_defense(unsigned char target);
+extern char_struct* get_character_data(unsigned char row);
+extern unsigned char get_calc_result(void);
+extern void lifeup_common(unsigned short healing_amount);
+extern void btlact_speed_up_1d4(void);
+extern void btlact_guts_up_1d4(void);
+extern void btlact_vitality_up_1d4(void);
+extern void btlact_iq_up_1d4(void);
+extern void btlact_luck_up_1d4(void);
+extern unsigned short get_item_type(unsigned char item_id);
+extern void execute_battle_action(unsigned char action_id);
+extern void psi_fire_common(unsigned short damage);
+extern void psi_rockin_common(unsigned short damage);
 extern void reduce_hp(unsigned char target, unsigned short amount);
 extern void set_hp(unsigned char target, unsigned short amount);
 extern void take_item_from_character(unsigned char character, unsigned short item_id);
@@ -77,6 +94,9 @@ extern battler* get_battler(unsigned char target);
 #define STATUS_0_NAUSEOUS 2
 #define STATUS_2_CRYING 1
 #define STATUS_2_SOLIDIFIED 2
+#define LIFEUP_BETA_HEALING 400
+#define FIRE_ALPHA_DAMAGE 60
+#define ROCKIN_BETA_DAMAGE 240
 #define STATUS_3_STRANGE 1
 
 // Status constants (these are game logic, not ROM data)
@@ -520,4 +540,281 @@ void btlact_spy(void) {
 // Hypnosis Alpha redirect - calls main hypnosis function
 void redirect_btlact_hypnosis_a_copy(void) {
     btlact_hypnosis_a();
+}
+
+// Pray golden action - recovers HP equal to attacker's missing HP
+void btlact_pray_golden(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    battler* attacker = get_battler(CURRENT_ATTACKER);
+    
+    unsigned short missing_hp = target->hp_max - attacker->hp_target;
+    recover_hp(CURRENT_TARGET, missing_hp);
+}
+
+
+// Crying 2 action - inflicts crying status
+void btlact_crying2(void) {
+    if (fail_attack_on_npcs() == 0) {
+        if (inflict_status_battle(CURRENT_TARGET, STATUS_2_CRYING, STATUS_2_CRYING) != 0) {
+            display_text_wait(get_battle_message(MSG_BTL_NAMIDA_ON), 0);
+        } else {
+            display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        }
+    }
+}
+
+// Inflict solidification - freezes target
+void btlact_inflict_solidification(void) {
+    if (success_luck80() != 0) {
+        battler* target = get_battler(CURRENT_TARGET);
+        if (success_255(target->paralysis_resist) != 0) {
+            if (inflict_status_battle(CURRENT_TARGET, STATUS_GROUP_TEMPORARY, STATUS_2_SOLIDIFIED) != 0) {
+                display_text_wait(get_battle_message(MSG_BTL_KOORI_ON), 0);
+                return;
+            }
+        }
+    }
+    display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+}
+
+// Defense down alpha - reduces target defense
+void btlact_defense_down_a(void) {
+    if (fail_attack_on_npcs() == 0) {
+        if (success_luck80() != 0) {
+            battler* target = get_battler(CURRENT_TARGET);
+            unsigned short original_defense = target->defense;
+            
+            // Reduce defense by 1/16th (hexadecimate)
+            hexadecimate_defense(CURRENT_TARGET);
+            
+            // Calculate defense reduction amount
+            unsigned short defense_reduction = original_defense - target->defense;
+            
+            // Ensure we don't show negative reduction
+            if (defense_reduction > 0) {
+                display_text_wait(get_battle_message(MSG_BTL_DEFENSE_DOWN), defense_reduction);
+            }
+        } else {
+            display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        }
+    }
+}
+
+// Switch armor - changes armor during battle and recalculates stats  
+void btlact_switch_armor(void) {
+    battler* attacker = get_battler(CURRENT_ATTACKER);
+    
+    // Enable blinking triangle for equipment UI
+    enable_blinking_triangle(1);
+    
+    // Check if the item slot is valid for this character
+    unsigned char item_slot = attacker->current_action_argument & 0xFF;
+    if (unknown_c3ee14(attacker->id, item_slot) == 0) {
+        display_text_wait(get_battle_message(MSG_BTL_EQUIP_NG_WEAPON), 0);
+        clear_blinking_prompt();
+        return;
+    }
+    
+    // Get character data pointer
+    char_struct* character = get_character_data(attacker->row);
+    
+    // Store stat bonuses from current equipment before change
+    unsigned char defense_bonus = attacker->defense - attacker->base_defense;
+    unsigned char speed_bonus = attacker->speed - attacker->base_speed;
+    unsigned char luck_bonus = attacker->luck - attacker->base_luck;
+    
+    // Equip the new armor
+    equip_item(attacker->id, attacker->action_item_slot & 0xFF);
+    display_text_wait(get_battle_message(MSG_BTL_EQUIP_OK), 0);
+    
+    // Update base stats from character data
+    attacker->base_defense = character->defense;
+    attacker->base_speed = character->speed;
+    attacker->base_luck = character->luck;
+    
+    // Reapply stat bonuses
+    attacker->defense = attacker->base_defense + defense_bonus;
+    attacker->speed = attacker->base_speed + speed_bonus;
+    attacker->luck = attacker->base_luck + luck_bonus;
+    
+    // Update elemental resistances with modifiers
+    calc_psi_dmg_modifiers(character->fire_resist);
+    attacker->fire_resist = get_calc_result();
+    
+    calc_psi_dmg_modifiers(character->freeze_resist);
+    attacker->freeze_resist = get_calc_result();
+    
+    calc_psi_res_modifiers(character->flash_resist);
+    attacker->flash_resist = get_calc_result();
+    
+    calc_psi_res_modifiers(character->paralysis_resist);
+    attacker->paralysis_resist = get_calc_result();
+    
+    calc_psi_res_modifiers(character->hypnosis_brainshock_resist);
+    attacker->hypnosis_resist = get_calc_result();
+    
+    // Brainshock resistance is calculated as (3 - base resistance)
+    unsigned char brainshock_base = 3 - character->hypnosis_brainshock_resist;
+    calc_psi_res_modifiers(brainshock_base);
+    attacker->brainshock_resist = get_calc_result();
+    
+    clear_blinking_prompt();
+}
+
+// Lifeup Beta - healing spell
+void btlact_lifeup_b(void) {
+    lifeup_common(LIFEUP_BETA_HEALING);
+}
+
+// Sow seeds - summons help
+void btlact_sow_seeds(void) {
+    call_for_help_common(1);
+}
+
+// Brainshock Alpha redirect - redirects to main brainshock function
+void redirect_btlact_brainshock_a(void) {
+    btlact_brainshock_a();
+}
+
+// Random stat up 1d4 - randomly increases one stat by 1-4 points
+void btlact_random_stat_up_1d4(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    unsigned short stat_choice = rand_limit(7);
+    unsigned short increase_amount = rand_limit(4) + 1; // 1-4
+    
+    switch (stat_choice) {
+        case 0: // Defense
+            target->defense += increase_amount;
+            display_text_wait(get_battle_message(MSG_BTL_DEFENSE_UP), increase_amount);
+            break;
+            
+        case 1: // Offense
+            target->offense += increase_amount;
+            display_text_wait(get_battle_message(MSG_BTL_OFFENSE_UP), increase_amount);
+            break;
+            
+        case 2: // Speed
+            btlact_speed_up_1d4();
+            break;
+            
+        case 3: // Guts
+            btlact_guts_up_1d4();
+            break;
+            
+        case 4: // Vitality
+            btlact_vitality_up_1d4();
+            break;
+            
+        case 5: // IQ
+            btlact_iq_up_1d4();
+            break;
+            
+        case 6: // Luck
+            btlact_luck_up_1d4();
+            break;
+    }
+}
+
+void btlact_double_bash(void) {
+    btlact_bash();
+    btlact_bash();
+}
+
+void btlact_bomb(void) {
+    bomb_common(90);
+}
+
+void btlact_cold(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    if (success_255(target->freeze_resist) == 0) {
+        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        return;
+    }
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_0_COLD, STATUS_GROUP_PERSISTENT_EASYHEAL) != 0) {
+        display_text_wait(get_battle_message(MSG_BTL_KAZE_ON), 0);
+    } else {
+        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+    }
+}
+    }
+}
+
+// Switch weapon - changes weapon during battle and handles special attack behavior
+void btlact_switch_weapons(void) {
+    battler* attacker = get_battler(CURRENT_ATTACKER);
+    
+    // Enable blinking triangle for equipment UI
+    enable_blinking_triangle(1);
+    
+    // Check if the item slot is valid for this character
+    unsigned char item_slot = attacker->current_action_argument & 0xFF;
+    if (unknown_c3ee14(attacker->id, item_slot) == 0) {
+        display_text_wait(get_battle_message(MSG_BTL_EQUIP_NG_WEAPON), 0);
+        clear_blinking_prompt();
+        return;
+    }
+    
+    // Get character data pointer
+    char_struct* character = get_character_data(attacker->id - 1);
+    
+    // Store stat bonuses from current equipment before change
+    unsigned char offense_bonus = attacker->offense - attacker->base_offense;
+    unsigned char guts_bonus = attacker->guts - attacker->base_guts;
+    
+    // Equip the new weapon
+    equip_item(attacker->id, attacker->action_item_slot & 0xFF);
+    
+    // Update base stats from character data
+    attacker->base_offense = character->offense;
+    attacker->base_guts = character->guts;
+    
+    // Reapply stat bonuses
+    attacker->offense = attacker->base_offense + offense_bonus;
+    attacker->guts = attacker->base_guts + guts_bonus;
+    
+    display_text_wait(get_battle_message(MSG_BTL_EQUIP_OK), 0);
+    
+    // Check if new weapon is a shooting weapon (type 1)
+    unsigned char weapon_slot = character->equipment[WEAPON];
+    if (weapon_slot > 0) {
+        unsigned char weapon_item_id = character->items[weapon_slot - 1];
+        if (weapon_item_id > 0) {
+            // Check item type from configuration table
+            unsigned short item_type = get_item_type(weapon_item_id);
+            
+            if ((item_type & 0x03) == 1) { // Shooting weapon
+                // Use shooting attack (battle action 5)
+                execute_battle_action(5);
+                clear_blinking_prompt();
+                return;
+            }
+        }
+    }
+    
+    // Use regular bash attack (battle action 4)  
+    execute_battle_action(4);
+    clear_blinking_prompt();
+}
+
+// PSI Fire Alpha - fire damage spell
+void btlact_psi_fire_a(void) {
+    psi_fire_common(FIRE_ALPHA_DAMAGE);
+}
+
+// PSI Rockin Beta - physical damage spell
+void btlact_psi_rockin_b(void) {
+    psi_rockin_common(ROCKIN_BETA_DAMAGE);
+}
+
+// PSI Shield Beta redirect - redirects to main PSI Shield function
+void redirect_btlact_psi_shield_b(void) {
+    btlact_psi_shield_b();
+}
+
+// Level 3 attack copy - redirects to main level 3 attack function
+void redirect_btlact_level_3_atk(void) {
+    btlact_level_3_atk();
 }

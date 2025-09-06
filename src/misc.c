@@ -107,3 +107,16 @@ unsigned short change_equipped_other(unsigned short character, unsigned short ne
     
     return old_other;
 }
+
+// Check if item is equipped by character
+unsigned short check_item_equipped(unsigned char character_id, unsigned char item_slot) {
+    char_struct* character = &PARTY_CHARACTERS[character_id - 1];
+    
+    // Check each equipment slot
+    if (character->equipment[WEAPON] == item_slot) return 1;
+    if (character->equipment[BODY] == item_slot) return 1;
+    if (character->equipment[ARMS] == item_slot) return 1;
+    if (character->equipment[OTHER] == item_slot) return 1;
+    
+    return 0;
+}

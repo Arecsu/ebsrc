@@ -14,6 +14,7 @@ void play_sound_and_unknown(unsigned short sound_id);
 
 // SPC700 communication
 void wait_for_spc700(void);
+void load_spc700_data(unsigned char bank, unsigned short addr);
 
 // Audio configuration
 void set_audio_channels(unsigned short stereo_flag);
@@ -27,7 +28,6 @@ void change_music(unsigned short track_id);
 
 // Forward declarations for external functions
 extern unsigned short unknown_c0ac20(void);
-extern void load_spc700_data(unsigned char bank, unsigned short addr);
 
 // Music data structures (partial)
 typedef struct {

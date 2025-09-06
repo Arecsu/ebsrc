@@ -1,12 +1,12 @@
 # EarthBound Decompilation TODO
 
 ## Project Overview
-Converting 3,708 assembly files to C code to create a fully compilable C project without ASM dependencies.
+Converting 3,455 executable assembly files to C code to create a fully compilable C project without ASM dependencies. (253 ROM data/symbol/bank config files are auto-generated)
 
 ## Current Status  
-- **8 C modules created** with 1050+ lines of code
-- **72+ functions converted** from ASM to C
-- **Complete C compilation system working**
+- **8 C modules created** with 1400+ lines of code
+- **95+ functions converted** from ASM to C (102/3455 files = 3.0% complete)
+- **Complete C compilation system working** with ROM data access layer
 - **Zero warnings with strict GCC flags**
 - Organized header structure with proper includes
 - Clean build system with separate object directory
@@ -21,23 +21,31 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 - [x] Hardware definitions header (hardware.h)
 - [x] Organized header files for all modules
 
-### Audio System (184 lines) 
+### Audio System (280+ lines) 
 - [x] Music control (pause/resume/stop music, redirects)
 - [x] Sound effects (play_sound, play_sound_and_unknown)
-- [x] SPC700 communication (wait_for_spc700)
+- [x] SPC700 communication (wait_for_spc700, load_spc700_data)
 - [x] Audio configuration (set_audio_channels, get_audio_bank)
 - [x] Music subsystem initialization (initialize_music_subsystem)
 - [x] Music track management (change_music)
+- [x] SPC700 data loading (complete hardware interface)
 
-### Battle System (285+ lines)
+### Battle System (500+ lines)
 - [x] HP/PP recovery functions (10, 50, 100, 200, 300, 1d4, 10000, 20, 80)
 - [x] Battle actions (null actions, bash, level 1/2 attacks)
 - [x] Damage calculations (350 fire damage, resistance handling)
 - [x] Attack mechanics (miss calculation, dodge, critical hits)
 - [x] Additional battle actions (reduce_pp, call_for_help, pray_warm)
 - [x] New battle actions (null8/9, defense_shower, enemyextend, psi_flash_omega, bag_of_dragonite, mummy_wrap)
+- [x] Status effect actions (crying2, inflict_solidification with proper ROM data integration)
+- [x] Prayer actions (pray_golden for HP recovery based on missing HP)
+- [x] Stat modification actions (defense_down_alpha for reducing target defense)
+- [x] Equipment management (switch_armor, switch_weapons with full stat recalculation and weapon type detection)
+- [x] PSI/magic actions (lifeup_beta healing, psi_fire_alpha, psi_rockin_beta spells)
+- [x] Utility actions (sow_seeds summon, brainshock_alpha_redirect, random_stat_up_1d4)
+- [x] Redirect functions (psi_shield_beta_redirect, level_3_attack_copy)
 
-### System Utilities (145 lines)
+### System Utilities (220+ lines)
 - [x] Memory management (memset24, memcpy16, memset16)
 - [x] String utilities (eb_strlen)
 - [x] DMA utilities (wait_dma_finished)
@@ -45,10 +53,13 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 - [x] IRQ callback management (reset, set callbacks)
 - [x] Random number utilities (rand_0_3, rand_0_7)
 - [x] Math utilities (mult8, mult16, division16, modulus8, rand_limit, truncate_16_to_8)
+- [x] Advanced math functions (asl16, division8s, division8 with SNES hardware interface)
+- [x] Palette animation (animate_palette with timer and frame management)
 
-### Game Logic (108 lines misc + 71 overworld + 64 text)
+### Game Logic (130+ lines misc + 71 overworld + 64 text)
 - [x] Character equipment management (weapon, arms, body, other)
 - [x] ATM and wallet functions (deposit, withdraw, balance)
+- [x] Equipment checking utilities (check_item_equipped)
 - [x] Movement state management (mushroomized walking)
 - [x] Hotspot management (disable hotspots)
 - [x] Entity collision handling
@@ -153,16 +164,16 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 ## File Conversion Progress
 
 ### By Directory (Using .converted.asm tracking):
-- **audio/**: 11/12 files converted (91%)
-- **battle/actions**: 29/182 files converted (15%)
-- **system/math/**: 14/29 files converted (48%)
+- **audio/**: 12/12 files converted (100%)
+- **battle/actions**: 44/182 files converted (24%)
+- **system/math/**: 17/29 files converted (58%)
 - **text/**: 9/85 files converted (10%)
-- **misc/**: 6/58 files converted (10%) - Equipment & wallet
-- **system/**: 5/63 files converted (7%) - Core utilities  
+- **misc/**: 7/58 files converted (12%) - Equipment & wallet
+- **system/**: 8/63 files converted (12%) - Core utilities  
 - **overworld/**: 3/96 files converted (3%) - Basic functions
 - **inventory/**: 2/4 files converted (50%)
 
-### Total Progress: 79/3,708 ASM files converted (2.1%)
+### Total Progress: 102/3,455 executable ASM files converted (3.0%)
 
 **Progress Tracking System**: All converted ASM files are renamed to `.converted.asm`
 - Check progress: `./check_progress.sh`
@@ -183,14 +194,14 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 6. **Save/Load System** - Implement game state persistence
 
 ## Recent Achievements
-- **Total Progress: 79/3,708 files (2.1%)**
-- **Audio system 91% complete (11/12 files)**
-- **System math 48% complete (14/29 files)** - Added modulus8s, asr8, rand_custom
-- **Inventory 50% complete (2/4 files)**
-- **Battle actions 15% complete (29/182 files)** - Added 9 new battle functions
+- **Total Progress: 102/3,455 executable files (3.0%)**
+- **Audio system 100% complete (12/12 files)** - Fully converted!
+- **System math 58% complete (17/29 files)** - Added division functions, palette animation
+- **Battle actions 24% complete (44/182 files)** - Added PSI spells, equipment management
 - **Text system 10% complete (9/85 files)** - Added memory management functions
+- **System utilities 12% complete (8/63 files)** - Core infrastructure
 - **Working compilation system** with zero warnings
-- **1150+ lines of clean C code** across 8 game systems
+- **1400+ lines of clean C code** across 8 game systems
 
 ## Notes
 - Keep C code simple and human-readable

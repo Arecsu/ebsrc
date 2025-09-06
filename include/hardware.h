@@ -16,6 +16,7 @@
 #define APUIO1      0x2141
 #define APUIO2      0x2142
 #define APUIO3      0x2143
+#define NMITIMEN    0x4200
 
 // Processor flags for 65816
 #define PROC_CARRY              0x01
@@ -93,6 +94,17 @@ extern window_stats WINDOW_STATS[32];  // Array size TBD
 // IRQ and system variables
 extern unsigned short IRQ_CALLBACK;
 extern unsigned short DEFAULT_IRQ_CALLBACK;
+extern unsigned char NMITIMEN_MIRROR;
+
+// Overworld palette animation structure
+typedef struct {
+    unsigned char timer;
+    unsigned char index;
+    unsigned char delays[256]; // Animation frame delays
+} overworld_palette_anim;
+
+extern overworld_palette_anim OVERWORLD_PALETTE_ANIM;
+extern void unknown_c0a1f2(unsigned char index);
 
 // Text system variables
 extern unsigned char INSTANT_PRINTING;

@@ -226,3 +226,84 @@ unsigned char asr8(unsigned char value, unsigned char shift_count) {
         return result;
     }
 }
+
+// Arithmetic shift left for 16-bit values with shift count  
+unsigned short asl16(unsigned short value, unsigned char shift_count) {
+    return value << shift_count;
+}
+
+// 8-bit signed division using SNES hardware
+unsigned char division8s(char dividend, char divisor) {
+    if (divisor == 0) return 0;
+    
+    // Convert signed values to unsigned for hardware
+    unsigned char abs_dividend = (dividend < 0) ? -dividend : dividend;
+    unsigned char abs_divisor = (divisor < 0) ? -divisor : divisor;
+    
+    // Use SNES hardware divider
+    *(volatile unsigned short*)0x4204 = abs_dividend;  // WRDIVL (low byte only)
+    *(volatile unsigned short*)0x4206 = 0;             // WRDIVH (clear high byte)
+    *(volatile unsigned char*)0x4206 = abs_divisor;    // WRDIVB
+    
+    // Wait for division to complete (16 cycles)
+    __asm__ volatile ("nop");
+    __asm__ volatile ("nop");
+    __asm__ volatile ("nop");
+    __asm__ volatile ("nop");
+    __asm__ volatile ("nop");
+    __asm__ volatile ("nop");
+    
+    // Read quotient and remainder  
+    unsigned char quotient = *(volatile unsigned char*)0x4214;  // RDDIVL
+    (void)*(volatile unsigned char*)0x4216; // RDMPYL - read to clear register
+    
+    return quotient;
+}
+
+// 8-bit unsigned division wrapper - handles sign logic
+unsigned char division8(char dividend, char divisor) {
+    if (divisor == 0) return 0;
+    
+    // Determine if result should be negative (different signs)
+    char sign_flag = dividend ^ divisor;
+    
+    // Call signed division function
+    unsigned char result = division8s(dividend, divisor);
+    
+    // Apply sign correction if needed
+    if (sign_flag < 0 && result != 0) {
+        result = (unsigned char)(-(char)result);
+    }
+    
+    return result;
+}
+
+// Animate palette - handles overworld palette animation timing
+void animate_palette(void) {
+    // Decrement animation timer
+    OVERWORLD_PALETTE_ANIM.timer--;
+    
+    if (OVERWORLD_PALETTE_ANIM.timer == 0) {
+        // Timer expired, advance to next frame
+        unsigned char current_index = OVERWORLD_PALETTE_ANIM.index;
+        
+        // Get delay for current frame (doubled because delays are stored as words)
+        unsigned char delay = OVERWORLD_PALETTE_ANIM.delays[current_index * 2];
+        
+        if (delay == 0) {
+            // End of animation sequence, reset to beginning
+            OVERWORLD_PALETTE_ANIM.index = 0;
+            current_index = 0;
+            delay = OVERWORLD_PALETTE_ANIM.delays[0];
+        }
+        
+        // Set timer for next frame
+        OVERWORLD_PALETTE_ANIM.timer = delay;
+        
+        // Process the current palette frame (calls external function)
+        unknown_c0a1f2(current_index);
+        
+        // Advance to next frame
+        OVERWORLD_PALETTE_ANIM.index++;
+    }
+}
