@@ -1,0 +1,9 @@
+- This is a decompilation project, and we should have all C code
+- There is a /src folder and /include folder as well that might be useful. Keep the C code human readable and simple, with very simple comments across the code. We don't need anything fancy for now. 
+- No "original ASM" full code references in the C code, that will make them too verbose and we already have the ASM files lying around the project folder for future reference.
+- For the names of the unknown functions, we keep it unknown unless it is really obvious. The big focus is to turn this into a C compilable project without depending on ASM files anymore.
+- Go through the TODO.md to do the project and update it as you go through
+- Proper structure definitions and headers
+- Zero compilation warnings, as long as possible
+- Maintainable, human-readable result
+- The ASM files that have been fully processed will have a .converted.asm extension. You should update them as you go.
