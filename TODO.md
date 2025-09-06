@@ -152,14 +152,14 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 ## File Conversion Progress
 
 ### By Directory (Using .converted.asm tracking):
-- **audio/**: 11/12 files converted (91%) ✅ Nearly complete!
-- **battle/actions**: 15/182 files converted (8%) - Solid foundation
-- **system/math/**: 9/29 files converted (31%) ✅ Great progress!
-- **text/**: 7/85 files converted (8%) - Good start
+- **audio/**: 11/12 files converted (91%)
+- **battle/actions**: 15/182 files converted (8%)
+- **system/math/**: 9/29 files converted (31%)
+- **text/**: 7/85 files converted (8%)
 - **misc/**: 6/58 files converted (10%) - Equipment & wallet
 - **system/**: 5/63 files converted (7%) - Core utilities  
 - **overworld/**: 3/96 files converted (3%) - Basic functions
-- **inventory/**: 2/4 files converted (50%) ✅ Half done!
+- **inventory/**: 2/4 files converted (50%)
 
 ### Total Progress: 58/3,708 ASM files converted (1.6%)
 
@@ -167,13 +167,11 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 - Check progress: `./check_progress.sh`
 - Find unconverted files: `find src -name "*.asm" | grep -v ".converted"`
 
-## Estimated Timeline
-- **Phase 1** (Core Systems): 2-3 months
-- **Phase 2** (Game Logic): 3-4 months  
-- **Phase 3** (Content & Polish): 2-3 months
-- **Phase 4** (Testing & Optimization): 1-2 months
-
-**Total Estimated Time: 8-12 months for complete conversion**
+## Phases
+- **Phase 1** - Core Systems
+- **Phase 2** - Game Logic
+- **Phase 3** - Content & Polish
+- **Phase 4** - Testing & Optimization
 
 ## Next Immediate Steps
 1. **Text/Dialogue System** - Convert text rendering and dialogue functions
@@ -183,13 +181,12 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 5. **Menu Systems** - Convert UI and menu handling functions
 6. **Save/Load System** - Implement game state persistence
 
-## Recent Achievements 🎉
-- **REAL PROGRESS REVEALED: 58/3,708 files (1.6%)** - 5X more than estimated!
-- **Audio system 91% complete (11/12 files)** - nearly finished!
-- **System math 31% complete (9/29 files)** - solid foundation
-- **Inventory 50% complete (2/4 files)** - half done!
-- **Battle actions 8% complete (15/182 files)** - good progress
-- **Systematic progress tracking** with `.converted.asm` system
+## Recent Achievements
+- **Total Progress: 58/3,708 files (1.6%)**
+- **Audio system 91% complete (11/12 files)**
+- **System math 31% complete (9/29 files)**
+- **Inventory 50% complete (2/4 files)**
+- **Battle actions 8% complete (15/182 files)**
 - **Working compilation system** with zero warnings
 - **984+ lines of clean C code** across 8 game systems
 
