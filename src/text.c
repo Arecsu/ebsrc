@@ -1,6 +1,9 @@
 #include "include/hardware.h"
 #include "include/text.h"
 
+// Forward declarations
+extern unsigned short get_active_window_address(void);
+
 // Clear instant printing mode
 void clear_instant_printing(void) {
     INSTANT_PRINTING = 0;
@@ -61,4 +64,19 @@ void change_current_window_font(unsigned short font_id) {
     // Get window stats index and set font
     window_index = OPEN_WINDOW_TABLE[CURRENT_FOCUS_WINDOW];
     WINDOW_STATS[window_index].font = font_value;
+}
+
+// Set working memory for active window
+unsigned long set_working_memory(unsigned long value) {
+    unsigned short window_addr = get_active_window_address();
+    unsigned long* working_memory_ptr = (unsigned long*)&WINDOW_STATS[window_addr].working_memory;
+    
+    *working_memory_ptr = value;
+    return value;
+}
+
+// Increment secondary memory for active window
+void increment_secondary_memory(void) {
+    unsigned short window_addr = get_active_window_address();
+    WINDOW_STATS[window_addr].secondary_memory++;
 }

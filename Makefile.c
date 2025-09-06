@@ -8,7 +8,7 @@ CFLAGS = -Wall -Wextra -std=c99 -I. -DTEST_COMPILATION
 BUILDDIR = build
 
 # C source files
-CSOURCES = src/audio.c src/battle.c src/system.c src/misc.c src/overworld.c src/inventory.c src/text.c src/psi.c
+CSOURCES = src/audio.c src/battle.c src/system.c src/misc.c src/overworld.c src/inventory.c src/text.c src/psi.c src/rom_data.c
 
 # Object files (in build directory)
 COBJECTS = $(CSOURCES:src/%.c=$(BUILDDIR)/%.o)

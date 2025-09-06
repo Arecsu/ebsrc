@@ -83,6 +83,8 @@ typedef struct {
     unsigned short font;
     unsigned short next;
     unsigned short prev;
+    unsigned long working_memory;     // Added missing field
+    unsigned char secondary_memory;   // Added missing field
     // More fields TBD
 } window_stats;
 

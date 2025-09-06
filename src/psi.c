@@ -35,16 +35,14 @@ void btlact_psi_flash_a(void) {
     weaken_shield();
 }
 
-// Inflict paralysis status effect
+// Flash inflict paralysis - specific status effect for flash attacks
 void flash_inflict_paralysis(void) {
-    unsigned short result = inflict_status_battle(CURRENT_TARGET, 
-                                                STATUS_GROUP_PERSISTENT_EASYHEAL, 
-                                                STATUS_0_PARALYZED);
+    unsigned char result = inflict_status_battle(CURRENT_TARGET, STATUS_GROUP_PERSISTENT_EASYHEAL, STATUS_0_PARALYZED);
     
     if (result != 0) {
         display_battle_text_ptr(MSG_BTL_SHIBIRE_ON);  // "Paralyzed!"
     } else {
-        display_battle_text_ptr(MSG_BTL_KIKANAI);     // "No effect"
+        display_battle_text_ptr(MSG_BTL_KIKANAI);     // "Had no effect"
     }
 }
 

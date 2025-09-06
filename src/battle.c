@@ -1,5 +1,6 @@
 #include "include/hardware.h"
 #include "include/battle.h"
+#include "include/rom_data.h"
 
 // Forward declarations for external functions
 extern unsigned short twenty_five_percent_variance(unsigned short value);
@@ -17,6 +18,31 @@ extern void btlact_level_2_atk(void);
 extern void psi_fire_common(unsigned short damage);
 extern void bottle_rocket_common(unsigned short count);
 extern void btlact_healing_a(void);
+extern void btlact_defense_spray(void);
+extern unsigned char fail_attack_on_npcs(void);
+extern unsigned char flash_immunity_test(void);
+extern void ko_target(unsigned char target);
+extern void flash_inflict_paralysis(void);
+extern void flash_inflict_feeling_strange(void);
+extern void flash_inflict_crying(void);
+extern void weaken_shield(void);
+extern unsigned char success_speed(unsigned short threshold);
+extern void inflict_status_battle(unsigned char target, unsigned char status_group, unsigned char status);
+extern void enable_blinking_triangle(unsigned char enabled);
+extern void clear_blinking_prompt(void);
+extern unsigned char unknown_c3ee14(unsigned char character_id, unsigned char item_slot);
+extern void equip_item(unsigned char character_id, unsigned char item_slot);
+extern void calc_psi_dmg_modifiers(unsigned char base_resist);
+extern void calc_psi_res_modifiers(unsigned char base_resist);
+extern void btlact_psi_shield_a(void);
+extern void btlact_hypnosis_a(void);
+extern unsigned char success_luck80(void);
+extern void reduce_hp(unsigned char target, unsigned short amount);
+extern void set_hp(unsigned char target, unsigned short amount);
+extern void take_item_from_character(unsigned char character, unsigned short item_id);
+// display_text_wait is declared in battle.h
+extern unsigned short ITEM_DROPPED;
+extern unsigned char MIRROR_ENEMY;
 extern unsigned char CURRENT_TARGET;
 extern unsigned char CURRENT_ATTACKER;
 
@@ -38,6 +64,8 @@ extern battler* get_battler(unsigned char target);
 #define FIRE_BETA_DAMAGE 200
 #define BOTTLE_ROCKET_COUNT 3
 #define BIG_BOTTLE_ROCKET_COUNT 6
+#define MUMMY_WRAP_BASE_DAMAGE 180
+#define BAG_OF_DRAGONITE_DAMAGE 800
 
 // Status group constants  
 #define STATUS_GROUP_PERSISTENT_EASYHEAL 0
@@ -48,7 +76,11 @@ extern battler* get_battler(unsigned char target);
 #define STATUS_0_POISONED 1
 #define STATUS_0_NAUSEOUS 2
 #define STATUS_2_CRYING 1
+#define STATUS_2_SOLIDIFIED 2
 #define STATUS_3_STRANGE 1
+
+// Status constants (these are game logic, not ROM data)
+#define STATUS_0_PARALYZED 4            // Paralysis status constant
 
 // Null battle action - does nothing
 void btlact_null(void) {
@@ -272,4 +304,220 @@ void btlact_pray_warm(void) {
     battler* target = get_battler(CURRENT_TARGET);
     unsigned short heal_amount = target->hp_max >> 3;  // Divide by 8
     recover_hp(CURRENT_TARGET, heal_amount);
+}
+
+// Additional null battle actions
+void btlact_null8(void) {
+    // Empty function - no operation
+}
+
+void btlact_null9(void) {
+    // Empty function - no operation  
+}
+
+// Defense shower - calls defense spray
+void btlact_defense_shower(void) {
+    btlact_defense_spray();
+}
+
+// Enemy extend - empty action
+void btlact_enemyextend(void) {
+    // Empty function - no operation
+}
+
+// PSI Flash Omega - powerful flash attack with random effects
+void btlact_psi_flash_o(void) {
+    if (fail_attack_on_npcs() != 0) {
+        return;  // Failed on NPCs
+    }
+    
+    if (flash_immunity_test() == 0) {
+        return;  // Target is immune
+    }
+    
+    // Random effect (0-7)
+    unsigned char effect = rand_limit(8);
+    
+    if (effect <= 2) {
+        // 3/8 chance to KO target
+        ko_target(CURRENT_TARGET);
+    } else if (effect == 3) {
+        // 1/8 chance to inflict paralysis
+        flash_inflict_paralysis();
+    } else if (effect == 4) {
+        // 1/8 chance to inflict feeling strange
+        flash_inflict_feeling_strange();
+    } else {
+        // 3/8 chance to inflict crying
+        flash_inflict_crying();
+    }
+    
+    weaken_shield();
+}
+
+// Bag of dragonite - fire damage item
+void btlact_bag_of_dragonite(void) {
+    unsigned short damage = twenty_five_percent_variance(BAG_OF_DRAGONITE_DAMAGE);
+    battler* target = get_battler(CURRENT_TARGET);
+    calc_resist_damage(damage, target->fire_resist);
+}
+
+// Mummy wrap - physical attack that can solidify
+void btlact_mummy_wrap(void) {
+    if (fail_attack_on_npcs() != 0) {
+        return;  // Failed on NPCs
+    }
+    
+    if (success_speed(250) == 0) {
+        // Use ROM message data through battle text system
+        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        return;
+    }
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    short damage = MUMMY_WRAP_BASE_DAMAGE - target->defense;
+    
+    if (damage <= 0) {
+        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        return;
+    }
+    
+    calc_resist_damage(damage, 0xFF);  // No special resistance
+    
+    // Try to inflict solidified status
+    inflict_status_battle(CURRENT_TARGET, STATUS_GROUP_TEMPORARY, STATUS_2_SOLIDIFIED);
+    display_text_wait(get_battle_message(MSG_BTL_KOORI_ON), 0);
+}
+
+// PSI Fire Beta (already implemented as btlact_psi_fire_b, but different name)
+void btlact_psi_fire_beta(void) {
+    psi_fire_common(FIRE_BETA_DAMAGE);
+}
+
+// PSI Shield Alpha redirect - calls main shield function
+void redirect_btlact_psi_shield_a(void) {
+    btlact_psi_shield_a();
+}
+
+// HP Sucker battle action - drains HP from target and heals attacker
+void btlact_hp_sucker(void) {
+    if (success_luck80() == 0) {
+        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        return;
+    }
+    
+    battler* attacker = get_battler(CURRENT_ATTACKER);
+    if (attacker->hp_target == 0) {
+        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        return;
+    }
+    
+    if (CURRENT_TARGET == CURRENT_ATTACKER) {
+        display_text_wait(get_battle_message(MSG_BTL_HPSUCK_ME), 0);
+        return;
+    }
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    unsigned short damage = fifty_percent_variance(target->hp_max) >> 3;  // Divide by 8
+    
+    reduce_hp(CURRENT_TARGET, damage);
+    // Use ROM data access layer - no hardcoded strings
+    display_text_wait(get_battle_message(MSG_BTL_HPSUCK_ON), damage);
+    
+    // Heal attacker
+    unsigned short new_hp = attacker->hp + damage;
+    set_hp(CURRENT_ATTACKER, new_hp);
+    
+    // Check if target was KO'd
+    target = get_battler(CURRENT_TARGET);  // Refresh after HP change
+    if (target->hp == 0) {
+        ko_target(CURRENT_TARGET);
+    }
+}
+
+// Steal battle action - attempts to steal item
+void btlact_steal(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    
+    // Check if target is an enemy (ally_or_enemy == 1)
+    if (target->ally_or_enemy != 1) {
+        return;  // Can't steal from allies
+    }
+    
+    // Check NPC ID
+    if (target->npc_id != 0) {
+        return;  // Can't steal from certain NPCs
+    }
+    
+    // Mirror enemy check
+    if (MIRROR_ENEMY != 0) {
+        battler* attacker = get_battler(CURRENT_ATTACKER);
+        if (attacker->ally_or_enemy == 0) {
+            // Additional check - if attacker is party member 4 (Poo), allow
+            if (attacker->id != 4) {
+                return;
+            }
+        }
+    }
+    
+    // Get item to steal from action argument
+    battler* attacker = get_battler(CURRENT_ATTACKER);
+    unsigned char item_id = attacker->current_action_argument & 0xFF;
+    
+    if (item_id == 0) {
+        return;  // No item to steal
+    }
+    
+    // Attempt to steal item
+    take_item_from_character(item_id, 0xFF);
+}
+
+// Spy battle action - displays enemy stats and resistances  
+void btlact_spy(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    
+    // Display offense using ROM data access layer
+    display_text_wait(get_battle_message(MSG_BTL_CHECK_OFFENSE), target->offense);
+    
+    // Display defense using ROM data access layer  
+    display_text_wait(get_battle_message(MSG_BTL_CHECK_DEFENSE), target->defense);
+    
+    // Check resistances and display messages if fully resistant (0xFF)
+    if (target->fire_resist == 0xFF) {
+        display_text_wait(get_battle_message(MSG_BTL_CHECK_ANTI_FIRE), 0);
+    }
+    
+    if (target->freeze_resist == 0xFF) {
+        display_text_wait(get_battle_message(MSG_BTL_CHECK_ANTI_FREEZE), 0);
+    }
+    
+    if (target->flash_resist == 0xFF) {
+        display_text_wait(get_battle_message(MSG_BTL_CHECK_ANTI_FLASH), 0);
+    }
+    
+    if (target->paralysis_resist == 0xFF) {
+        display_text_wait(get_battle_message(MSG_BTL_CHECK_ANTI_PARALYSIS), 0);
+    }
+    
+    if (target->hypnosis_resist == 0xFF) {
+        display_text_wait(get_battle_message(MSG_BTL_CHECK_BRAIN_LEVEL_0), 0);
+    }
+    
+    if (target->brainshock_resist == 0xFF) {
+        display_text_wait(get_battle_message(MSG_BTL_CHECK_BRAIN_LEVEL_3), 0);
+    }
+    
+    // Check for item drop from enemies
+    if (target->ally_or_enemy == 1) {  // Enemy
+        // Simplified version - would need find_inventory_space2 implementation
+        if (ITEM_DROPPED != 0) {
+            display_text_wait(get_battle_message(MSG_BTL_CHECK_PRESENT_GET), 0);
+            ITEM_DROPPED = 0;
+        }
+    }
+}
+
+// Hypnosis Alpha redirect - calls main hypnosis function
+void redirect_btlact_hypnosis_a_copy(void) {
+    btlact_hypnosis_a();
 }

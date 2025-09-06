@@ -143,3 +143,86 @@ unsigned short truncate_16_to_8(unsigned short value, unsigned short multiplier)
     unsigned long result = (unsigned long)value * multiplier;
     return (unsigned short)(result >> 8);  // Shift right 8 bits
 }
+
+// Arithmetic shift right for 16-bit signed values
+short asr16(short value) {
+    if (value >= 0) {
+        return value;  // Positive values unchanged
+    } else {
+        // For negative values, this is the same as regular right shift in C
+        return value >> 1;  // C handles sign extension automatically
+    }
+}
+
+// 16-bit signed modulus operation
+short modulus16s(short dividend, short divisor) {
+    if (divisor == 0) return 0;
+    
+    short result = dividend % divisor;
+    
+    // Handle sign correction for negative dividend
+    if (dividend < 0 && result != 0) {
+        result = -result;
+    }
+    
+    return result;
+}
+
+// Random number generator state  
+static unsigned short rand_a = 0x1234;  // Initial seed values
+static unsigned short rand_b = 0x5678;
+
+// Custom random number generator implementation
+unsigned char rand_custom(void) {
+    // Implementation based on the ASM code
+    unsigned short temp_a = rand_a;
+    unsigned short temp_b = rand_b;
+    
+    // Multiply and add operations
+    unsigned long mult_result = (unsigned long)(temp_a >> 8) * (temp_b & 0xFF);
+    temp_b = (temp_b + 0x6D) & 0xFFFF;
+    rand_b = temp_b;
+    
+    // Bit manipulation for rand_a
+    mult_result = (mult_result >> 2) & 0x3FFF;
+    temp_a = ((mult_result & 0x03) + temp_a) >> 1;
+    
+    if ((mult_result & 0x01) == 0) {
+        temp_a &= 0x7FFF;  // Clear high bit
+    } else {
+        temp_a |= 0x8000;  // Set high bit
+    }
+    
+    rand_a = temp_a;
+    
+    return (unsigned char)(mult_result & 0xFF);
+}
+
+// 8-bit signed modulus operation
+char modulus8s(char dividend, char divisor) {
+    if (divisor == 0) return 0;
+    
+    char result = dividend % divisor;
+    
+    // Handle sign correction for negative dividend
+    if (dividend < 0 && result != 0) {
+        result = -result;
+    }
+    
+    return result;
+}
+
+// Arithmetic shift right for 8-bit values with shift count
+unsigned char asr8(unsigned char value, unsigned char shift_count) {
+    if (value < 0x80) {
+        // Positive value - logical shift right
+        return value >> shift_count;
+    } else {
+        // Negative value - arithmetic shift right (sign extension)
+        unsigned char result = value;
+        for (unsigned char i = 0; i < shift_count; i++) {
+            result = (result >> 1) | 0x80;  // Shift right and preserve sign bit
+        }
+        return result;
+    }
+}

@@ -96,14 +96,23 @@ extern unsigned char PARTY_MEMBER_TARGET;
 // Battle system structures
 typedef struct {
     unsigned char id;
-    unsigned short hp_current;
+    unsigned short hp;           // Current HP (renamed from hp_current)
     unsigned short hp_max;
     unsigned short pp_current;
     unsigned short pp_max;
     unsigned short pp_target;
+    unsigned short hp_target;    // Added missing field
     unsigned short offense;
     unsigned short defense;
     unsigned char fire_resist;
+    unsigned char freeze_resist; // Added missing field
+    unsigned char flash_resist;  // Added missing field
+    unsigned char paralysis_resist; // Added missing field
+    unsigned char hypnosis_resist;  // Added missing field
+    unsigned char brainshock_resist; // Added missing field
+    unsigned char ally_or_enemy; // Added missing field (0=ally, 1=enemy)
+    unsigned char npc_id;        // Added missing field
+    unsigned char current_action_argument; // Added missing field
     // More fields TBD
 } battler;
 

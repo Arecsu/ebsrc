@@ -4,8 +4,8 @@
 Converting 3,708 assembly files to C code to create a fully compilable C project without ASM dependencies.
 
 ## Current Status  
-- **8 C modules created** with 684+ lines of code
-- **65+ functions converted** from ASM to C
+- **8 C modules created** with 1050+ lines of code
+- **72+ functions converted** from ASM to C
 - **Complete C compilation system working**
 - **Zero warnings with strict GCC flags**
 - Organized header structure with proper includes
@@ -29,12 +29,13 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 - [x] Music subsystem initialization (initialize_music_subsystem)
 - [x] Music track management (change_music)
 
-### Battle System (218 lines)
+### Battle System (285+ lines)
 - [x] HP/PP recovery functions (10, 50, 100, 200, 300, 1d4, 10000, 20, 80)
 - [x] Battle actions (null actions, bash, level 1/2 attacks)
 - [x] Damage calculations (350 fire damage, resistance handling)
 - [x] Attack mechanics (miss calculation, dodge, critical hits)
 - [x] Additional battle actions (reduce_pp, call_for_help, pray_warm)
+- [x] New battle actions (null8/9, defense_shower, enemyextend, psi_flash_omega, bag_of_dragonite, mummy_wrap)
 
 ### System Utilities (145 lines)
 - [x] Memory management (memset24, memcpy16, memset16)
@@ -153,15 +154,15 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 
 ### By Directory (Using .converted.asm tracking):
 - **audio/**: 11/12 files converted (91%)
-- **battle/actions**: 15/182 files converted (8%)
-- **system/math/**: 9/29 files converted (31%)
-- **text/**: 7/85 files converted (8%)
+- **battle/actions**: 29/182 files converted (15%)
+- **system/math/**: 14/29 files converted (48%)
+- **text/**: 9/85 files converted (10%)
 - **misc/**: 6/58 files converted (10%) - Equipment & wallet
 - **system/**: 5/63 files converted (7%) - Core utilities  
 - **overworld/**: 3/96 files converted (3%) - Basic functions
 - **inventory/**: 2/4 files converted (50%)
 
-### Total Progress: 58/3,708 ASM files converted (1.6%)
+### Total Progress: 79/3,708 ASM files converted (2.1%)
 
 **Progress Tracking System**: All converted ASM files are renamed to `.converted.asm`
 - Check progress: `./check_progress.sh`
@@ -182,13 +183,14 @@ Converting 3,708 assembly files to C code to create a fully compilable C project
 6. **Save/Load System** - Implement game state persistence
 
 ## Recent Achievements
-- **Total Progress: 58/3,708 files (1.6%)**
+- **Total Progress: 79/3,708 files (2.1%)**
 - **Audio system 91% complete (11/12 files)**
-- **System math 31% complete (9/29 files)**
+- **System math 48% complete (14/29 files)** - Added modulus8s, asr8, rand_custom
 - **Inventory 50% complete (2/4 files)**
-- **Battle actions 8% complete (15/182 files)**
+- **Battle actions 15% complete (29/182 files)** - Added 9 new battle functions
+- **Text system 10% complete (9/85 files)** - Added memory management functions
 - **Working compilation system** with zero warnings
-- **984+ lines of clean C code** across 8 game systems
+- **1150+ lines of clean C code** across 8 game systems
 
 ## Notes
 - Keep C code simple and human-readable
