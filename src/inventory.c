@@ -1,5 +1,7 @@
-#include "include/hardware.h"
-#include "include/inventory.h"
+#pragma code-name ("BANK05")
+
+#include "hardware.h"
+#include "inventory.h"
 
 // Forward declarations for external functions
 extern unsigned short mult168(unsigned short a, unsigned short b);

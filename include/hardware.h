@@ -1,7 +1,7 @@
 #ifndef HARDWARE_H
 #define HARDWARE_H
 
-#include "include/structs.h"
+#include "structs.h"
 
 // SNES hardware addresses and constants
 #define INIDISP     0x2100
@@ -106,6 +106,49 @@ extern window_stats WINDOW_STATS[32];  // Array size TBD
 extern unsigned short IRQ_CALLBACK;
 extern unsigned short DEFAULT_IRQ_CALLBACK;
 extern unsigned char NMITIMEN_MIRROR;
+
+// Graphics/Display Variables
+extern unsigned char BG1SC_MIRROR;
+extern unsigned char BG2SC_MIRROR;
+extern unsigned char BG3SC_MIRROR;
+extern unsigned char BG4SC_MIRROR;
+extern unsigned char BG12NBA_MIRROR;
+extern unsigned char BG34NBA_MIRROR;
+
+extern unsigned short BG1_X_POS;
+extern unsigned short BG1_Y_POS;
+extern unsigned short BG2_X_POS;
+extern unsigned short BG2_Y_POS;
+extern unsigned short BG3_X_POS;
+extern unsigned short BG3_Y_POS;
+extern unsigned short BG4_X_POS;
+extern unsigned short BG4_Y_POS;
+
+// Color averaging
+extern unsigned char COLOUR_AVERAGE_RED;
+extern unsigned char COLOUR_AVERAGE_GREEN;
+extern unsigned char COLOUR_AVERAGE_BLUE;
+
+// Battle System
+extern unsigned short CURRENT_ATTACKER;
+extern unsigned short CURRENT_TARGET;
+
+// Audio System
+extern unsigned short CURRENT_MUSIC_TRACK;
+extern unsigned char CURRENT_SEQUENCE_PACK;
+extern unsigned char CURRENT_PRIMARY_SAMPLE_PACK;
+extern unsigned char CURRENT_SECONDARY_SAMPLE_PACK;
+extern unsigned char DISABLE_HPPP_ROLLING;
+extern unsigned char HALF_HPPP_METER_SPEED;
+extern unsigned char SOUND_EFFECT_QUEUE[8];
+extern unsigned char SOUND_EFFECT_QUEUE_END_INDEX;
+extern unsigned char SOUND_EFFECT_UPPER_BIT_FLIPPER;
+
+// Input/Controls  
+extern unsigned short PAD_RAW;
+extern unsigned short PAD_RAW_2;
+extern unsigned short JOYPAD_1_DATA;
+extern unsigned short JOYPAD_2_DATA;
 extern unsigned char LAST_SRAM_BANK;
 extern unsigned char SPRITE_VRAM_TABLE[88];
 

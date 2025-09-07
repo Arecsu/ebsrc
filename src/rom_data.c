@@ -1,6 +1,6 @@
 #include <stddef.h>  // For NULL
-#include "include/hardware.h"
-#include "include/rom_data.h"
+#include "hardware.h"
+#include "rom_data.h"
 
 // =============================================================================
 // ROM DATA ACCESS FUNCTIONS

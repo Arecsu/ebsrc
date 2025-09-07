@@ -12,6 +12,11 @@
 
 .SEGMENT "BANK00"
 
+; Import C function symbols (they get _ prefix from CC65)
+.IMPORT _reset_handler
+.IMPORT _nmi_handler
+.IMPORT _irq_handler
+
 ; Include system vector implementations (.critical.asm = never convert to C)
 .INCLUDE "../system/reset_vector.critical.asm"
 .INCLUDE "../system/nmi_vector.critical.asm"  

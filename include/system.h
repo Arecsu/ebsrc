@@ -18,6 +18,11 @@ unsigned short eb_strlen(const unsigned char* str);
 void wait_dma_finished(void);
 void set_bg2_vram_location(unsigned char tilemap_config, unsigned short tilemap_addr, unsigned short tile_addr);
 
+// Interrupt handlers
+void reset_handler(void);
+void nmi_handler(void);
+void irq_handler(void);
+
 // IRQ callback management
 void reset_irq_callback(void);
 void set_irq_callback(unsigned short callback_addr);

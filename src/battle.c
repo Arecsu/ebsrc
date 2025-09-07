@@ -1,6 +1,8 @@
-#include "include/hardware.h"
-#include "include/battle.h"
-#include "include/rom_data.h"
+#pragma code-name ("BANK01")
+
+#include "hardware.h"
+#include "battle.h"
+#include "rom_data.h"
 
 // Forward declarations for external functions
 extern unsigned short twenty_five_percent_variance(unsigned short value);
@@ -203,6 +205,10 @@ void btlact_bash(void) {
 
 // Level 1 attack - basic physical attack
 void btlact_level_1_atk(void) {
+    battler* attacker;
+    battler* target;
+    short damage;
+    
     if (miss_calc(0) != 0) {
         return;  // Attack missed
     }
@@ -217,10 +223,10 @@ void btlact_level_1_atk(void) {
     }
     
     // Calculate damage: attacker offense - target defense
-    battler* attacker = get_battler(CURRENT_ATTACKER);
-    battler* target = get_battler(CURRENT_TARGET);
+    attacker = get_battler(CURRENT_ATTACKER);
+    target = get_battler(CURRENT_TARGET);
     
-    short damage = attacker->offense - target->defense;
+    damage = attacker->offense - target->defense;
     
     if (damage > 0) {
         damage = twenty_five_percent_variance(damage);
@@ -236,11 +242,15 @@ void btlact_level_1_atk(void) {
 
 // Level 2 attack - stronger physical attack
 void btlact_level_2_atk(void) {
-    // Calculate damage: (attacker offense * 2) - target defense
-    battler* attacker = get_battler(CURRENT_ATTACKER);
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* attacker;
+    battler* target;
+    short damage;
     
-    short damage = (attacker->offense * 2) - target->defense;
+    // Calculate damage: (attacker offense * 2) - target defense
+    attacker = get_battler(CURRENT_ATTACKER);
+    target = get_battler(CURRENT_TARGET);
+    
+    damage = (attacker->offense * 2) - target->defense;
     
     if (damage > 0) {
         damage = twenty_five_percent_variance(damage);
@@ -275,10 +285,15 @@ void btlact_big_bottle_rocket(void) {
 
 // Healing Beta PSI - cures status ailments
 void btlact_healing_b(void) {
-    battler* target = get_battler(CURRENT_TARGET);
-    unsigned char* persistent_status = &((unsigned char*)target)[sizeof(battler) + STATUS_GROUP_PERSISTENT_EASYHEAL];
-    unsigned char* temp_status = &((unsigned char*)target)[sizeof(battler) + STATUS_GROUP_TEMPORARY];
-    unsigned char* strange_status = &((unsigned char*)target)[sizeof(battler) + STATUS_GROUP_STRANGENESS];
+    battler* target;
+    unsigned char* persistent_status;
+    unsigned char* temp_status;
+    unsigned char* strange_status;
+    
+    target = get_battler(CURRENT_TARGET);
+    persistent_status = &((unsigned char*)target)[sizeof(battler) + STATUS_GROUP_PERSISTENT_EASYHEAL];
+    temp_status = &((unsigned char*)target)[sizeof(battler) + STATUS_GROUP_TEMPORARY];
+    strange_status = &((unsigned char*)target)[sizeof(battler) + STATUS_GROUP_STRANGENESS];
     
     if (*persistent_status == STATUS_0_POISONED) {
         *persistent_status = 0;
@@ -299,14 +314,17 @@ void btlact_healing_b(void) {
 
 // Reduce PP battle action
 void btlact_reduce_pp(void) {
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* target;
+    unsigned short pp_drain;
+    
+    target = get_battler(CURRENT_TARGET);
     
     if (target->pp_target == 0) {
         display_battle_text_ptr(MSG_BTL_PPSUCK_ZERO);
         return;
     }
     
-    unsigned short pp_drain = target->pp_max >> 4;  // Divide by 16
+    pp_drain = target->pp_max >> 4;  // Divide by 16
     if (pp_drain == 0) {
         display_battle_text_ptr(MSG_BTL_KIKANAI);
         return;
@@ -324,8 +342,11 @@ void btlact_call_for_help(void) {
 
 // Pray warm battle action (heals 1/8 max HP)
 void btlact_pray_warm(void) {
-    battler* target = get_battler(CURRENT_TARGET);
-    unsigned short heal_amount = target->hp_max >> 3;  // Divide by 8
+    battler* target;
+    unsigned short heal_amount;
+    
+    target = get_battler(CURRENT_TARGET);
+    heal_amount = target->hp_max >> 3;  // Divide by 8
     recover_hp(CURRENT_TARGET, heal_amount);
 }
 
@@ -350,6 +371,8 @@ void btlact_enemyextend(void) {
 
 // PSI Flash Omega - powerful flash attack with random effects
 void btlact_psi_flash_o(void) {
+    unsigned char effect;
+    
     if (fail_attack_on_npcs() != 0) {
         return;  // Failed on NPCs
     }
@@ -359,7 +382,7 @@ void btlact_psi_flash_o(void) {
     }
     
     // Random effect (0-7)
-    unsigned char effect = rand_limit(8);
+    effect = rand_limit(8);
     
     if (effect <= 2) {
         // 3/8 chance to KO target
@@ -380,13 +403,19 @@ void btlact_psi_flash_o(void) {
 
 // Bag of dragonite - fire damage item
 void btlact_bag_of_dragonite(void) {
-    unsigned short damage = twenty_five_percent_variance(BAG_OF_DRAGONITE_DAMAGE);
-    battler* target = get_battler(CURRENT_TARGET);
+    unsigned short damage;
+    battler* target;
+    
+    damage = twenty_five_percent_variance(BAG_OF_DRAGONITE_DAMAGE);
+    target = get_battler(CURRENT_TARGET);
     calc_resist_damage(damage, target->fire_resist);
 }
 
 // Mummy wrap - physical attack that can solidify
 void btlact_mummy_wrap(void) {
+    battler* target;
+    short damage;
+    
     if (fail_attack_on_npcs() != 0) {
         return;  // Failed on NPCs
     }
@@ -397,8 +426,8 @@ void btlact_mummy_wrap(void) {
         return;
     }
     
-    battler* target = get_battler(CURRENT_TARGET);
-    short damage = MUMMY_WRAP_BASE_DAMAGE - target->defense;
+    target = get_battler(CURRENT_TARGET);
+    damage = MUMMY_WRAP_BASE_DAMAGE - target->defense;
     
     if (damage <= 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
@@ -424,12 +453,17 @@ void redirect_btlact_psi_shield_a(void) {
 
 // HP Sucker battle action - drains HP from target and heals attacker
 void btlact_hp_sucker(void) {
+    battler* attacker;
+    battler* target;
+    unsigned short damage;
+    unsigned short new_hp;
+    
     if (success_luck80() == 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
     }
     
-    battler* attacker = get_battler(CURRENT_ATTACKER);
+    attacker = get_battler(CURRENT_ATTACKER);
     if (attacker->hp_target == 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
@@ -440,15 +474,15 @@ void btlact_hp_sucker(void) {
         return;
     }
     
-    battler* target = get_battler(CURRENT_TARGET);
-    unsigned short damage = fifty_percent_variance(target->hp_max) >> 3;  // Divide by 8
+    target = get_battler(CURRENT_TARGET);
+    damage = fifty_percent_variance(target->hp_max) >> 3;  // Divide by 8
     
     reduce_hp(CURRENT_TARGET, damage);
     // Use ROM data access layer - no hardcoded strings
     display_text_wait(get_battle_message(MSG_BTL_HPSUCK_ON), damage);
     
     // Heal attacker
-    unsigned short new_hp = attacker->hp + damage;
+    new_hp = attacker->hp + damage;
     set_hp(CURRENT_ATTACKER, new_hp);
     
     // Check if target was KO'd
@@ -460,7 +494,11 @@ void btlact_hp_sucker(void) {
 
 // Steal battle action - attempts to steal item
 void btlact_steal(void) {
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* target;
+    battler* attacker;
+    unsigned char item_id;
+    
+    target = get_battler(CURRENT_TARGET);
     
     // Check if target is an enemy (ally_or_enemy == 1)
     if (target->ally_or_enemy != 1) {
@@ -484,8 +522,8 @@ void btlact_steal(void) {
     }
     
     // Get item to steal from action argument
-    battler* attacker = get_battler(CURRENT_ATTACKER);
-    unsigned char item_id = attacker->current_action_argument & 0xFF;
+    attacker = get_battler(CURRENT_ATTACKER);
+    item_id = attacker->current_action_argument & 0xFF;
     
     if (item_id == 0) {
         return;  // No item to steal
@@ -497,7 +535,9 @@ void btlact_steal(void) {
 
 // Spy battle action - displays enemy stats and resistances  
 void btlact_spy(void) {
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* target;
+    
+    target = get_battler(CURRENT_TARGET);
     
     // Display offense using ROM data access layer
     display_text_wait(get_battle_message(MSG_BTL_CHECK_OFFENSE), target->offense);
@@ -547,10 +587,14 @@ void redirect_btlact_hypnosis_a_copy(void) {
 
 // Pray golden action - recovers HP equal to attacker's missing HP
 void btlact_pray_golden(void) {
-    battler* target = get_battler(CURRENT_TARGET);
-    battler* attacker = get_battler(CURRENT_ATTACKER);
+    battler* target;
+    battler* attacker;
+    unsigned short missing_hp;
     
-    unsigned short missing_hp = target->hp_max - attacker->hp_target;
+    target = get_battler(CURRENT_TARGET);
+    attacker = get_battler(CURRENT_ATTACKER);
+    
+    missing_hp = target->hp_max - attacker->hp_target;
     recover_hp(CURRENT_TARGET, missing_hp);
 }
 
@@ -568,8 +612,10 @@ void btlact_crying2(void) {
 
 // Inflict solidification - freezes target
 void btlact_inflict_solidification(void) {
+    battler* target;
+    
     if (success_luck80() != 0) {
-        battler* target = get_battler(CURRENT_TARGET);
+        target = get_battler(CURRENT_TARGET);
         if (success_255(target->paralysis_resist) != 0) {
             if (inflict_status_battle(CURRENT_TARGET, STATUS_GROUP_TEMPORARY, STATUS_2_SOLIDIFIED) != 0) {
                 display_text_wait(get_battle_message(MSG_BTL_KOORI_ON), 0);
@@ -582,16 +628,20 @@ void btlact_inflict_solidification(void) {
 
 // Defense down alpha - reduces target defense
 void btlact_defense_down_a(void) {
+    battler* target;
+    unsigned short original_defense;
+    unsigned short defense_reduction;
+    
     if (fail_attack_on_npcs() == 0) {
         if (success_luck80() != 0) {
-            battler* target = get_battler(CURRENT_TARGET);
-            unsigned short original_defense = target->defense;
+            target = get_battler(CURRENT_TARGET);
+            original_defense = target->defense;
             
             // Reduce defense by 1/16th (hexadecimate)
             hexadecimate_defense(CURRENT_TARGET);
             
             // Calculate defense reduction amount
-            unsigned short defense_reduction = original_defense - target->defense;
+            defense_reduction = original_defense - target->defense;
             
             // Ensure we don't show negative reduction
             if (defense_reduction > 0) {
@@ -605,13 +655,21 @@ void btlact_defense_down_a(void) {
 
 // Switch armor - changes armor during battle and recalculates stats  
 void btlact_switch_armor(void) {
-    battler* attacker = get_battler(CURRENT_ATTACKER);
+    battler* attacker;
+    unsigned char item_slot;
+    char_struct* character;
+    unsigned char defense_bonus;
+    unsigned char speed_bonus;
+    unsigned char luck_bonus;
+    unsigned char brainshock_base;
+    
+    attacker = get_battler(CURRENT_ATTACKER);
     
     // Enable blinking triangle for equipment UI
     enable_blinking_triangle(1);
     
     // Check if the item slot is valid for this character
-    unsigned char item_slot = attacker->current_action_argument & 0xFF;
+    item_slot = attacker->current_action_argument & 0xFF;
     if (unknown_c3ee14(attacker->id, item_slot) == 0) {
         display_text_wait(get_battle_message(MSG_BTL_EQUIP_NG_WEAPON), 0);
         clear_blinking_prompt();
@@ -619,12 +677,12 @@ void btlact_switch_armor(void) {
     }
     
     // Get character data pointer
-    char_struct* character = get_character_data(attacker->row);
+    character = get_character_data(attacker->row);
     
     // Store stat bonuses from current equipment before change
-    unsigned char defense_bonus = attacker->defense - attacker->base_defense;
-    unsigned char speed_bonus = attacker->speed - attacker->base_speed;
-    unsigned char luck_bonus = attacker->luck - attacker->base_luck;
+    defense_bonus = attacker->defense - attacker->base_defense;
+    speed_bonus = attacker->speed - attacker->base_speed;
+    luck_bonus = attacker->luck - attacker->base_luck;
     
     // Equip the new armor
     equip_item(attacker->id, attacker->action_item_slot & 0xFF);
@@ -657,7 +715,7 @@ void btlact_switch_armor(void) {
     attacker->hypnosis_resist = get_calc_result();
     
     // Brainshock resistance is calculated as (3 - base resistance)
-    unsigned char brainshock_base = 3 - character->hypnosis_brainshock_resist;
+    brainshock_base = 3 - character->hypnosis_brainshock_resist;
     calc_psi_res_modifiers(brainshock_base);
     attacker->brainshock_resist = get_calc_result();
     
@@ -681,9 +739,13 @@ void redirect_btlact_brainshock_a(void) {
 
 // Random stat up 1d4 - randomly increases one stat by 1-4 points
 void btlact_random_stat_up_1d4(void) {
-    battler* target = get_battler(CURRENT_TARGET);
-    unsigned short stat_choice = rand_limit(7);
-    unsigned short increase_amount = rand_limit(4) + 1; // 1-4
+    battler* target;
+    unsigned short stat_choice;
+    unsigned short increase_amount;
+    
+    target = get_battler(CURRENT_TARGET);
+    stat_choice = rand_limit(7);
+    increase_amount = rand_limit(4) + 1; // 1-4
     
     switch (stat_choice) {
         case 0: // Defense
@@ -728,9 +790,11 @@ void btlact_bomb(void) {
 }
 
 void btlact_cold(void) {
+    battler* target;
+    
     if (fail_attack_on_npcs() != 0) return;
     
-    battler* target = get_battler(CURRENT_TARGET);
+    target = get_battler(CURRENT_TARGET);
     if (success_255(target->freeze_resist) == 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
@@ -744,9 +808,11 @@ void btlact_cold(void) {
 }
 
 void btlact_diamondize(void) {
+    battler* target;
+    
     if (fail_attack_on_npcs() != 0) return;
     
-    battler* target = get_battler(CURRENT_TARGET);
+    target = get_battler(CURRENT_TARGET);
     if (success_255(target->paralysis_resist) == 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
@@ -783,6 +849,8 @@ void btlact_feel_strange(void) {
 }
 
 void btlact_paralyze(void) {
+    battler* target;
+    
     if (fail_attack_on_npcs() != 0) return;
     
     if (success_luck80() == 0) {
@@ -790,7 +858,7 @@ void btlact_paralyze(void) {
         return;
     }
     
-    battler* target = get_battler(CURRENT_TARGET);
+    target = get_battler(CURRENT_TARGET);
     if (success_255(target->paralysis_resist) == 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
@@ -835,9 +903,11 @@ void btlact_mushroomize(void) {
 }
 
 void btlact_crying(void) {
+    battler* target;
+    
     if (fail_attack_on_npcs() != 0) return;
     
-    battler* target = get_battler(CURRENT_TARGET);
+    target = get_battler(CURRENT_TARGET);
     if (success_255(target->flash_resist) == 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
@@ -860,7 +930,9 @@ void btlact_immobilize(void) {
 }
 
 void btlact_neutralize(void) {
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* target;
+    
+    target = get_battler(CURRENT_TARGET);
     
     // Reset all stats to base values
     target->offense = target->base_offense;
@@ -877,6 +949,8 @@ void btlact_neutralize(void) {
 }
 
 void btlact_distract(void) {
+    battler* target;
+    
     if (fail_attack_on_npcs() != 0) return;
     
     if (success_luck40() == 0) {
@@ -884,7 +958,7 @@ void btlact_distract(void) {
         return;
     }
     
-    battler* target = get_battler(CURRENT_TARGET);
+    target = get_battler(CURRENT_TARGET);
     if (success_255(target->paralysis_resist) == 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
@@ -904,7 +978,9 @@ void btlact_distract(void) {
 }
 
 void btlact_inflict_poison(void) {
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* target;
+    
+    target = get_battler(CURRENT_TARGET);
     if (success_255(target->paralysis_resist) == 0) {
         display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
@@ -918,22 +994,27 @@ void btlact_inflict_poison(void) {
 }
 
 void btlact_cut_guts(void) {
+    battler* target;
+    unsigned char original_guts;
+    unsigned char minimum_guts;
+    unsigned char guts_lost;
+    
     if (fail_attack_on_npcs() != 0) return;
     
-    battler* target = get_battler(CURRENT_TARGET);
-    unsigned char original_guts = target->guts;
+    target = get_battler(CURRENT_TARGET);
+    original_guts = target->guts;
     
     // Reduce guts to 75% of current value
     target->guts = (target->guts * 3) / 4;
     
     // Ensure guts doesn't go below half of base guts
-    unsigned char minimum_guts = target->base_guts / 2;
+    minimum_guts = target->base_guts / 2;
     if (target->guts < minimum_guts) {
         target->guts = minimum_guts;
     }
     
     // Calculate and display the amount lost
-    unsigned char guts_lost = original_guts - target->guts;
+    guts_lost = original_guts - target->guts;
     display_text_wait((const char*)MSG_BTL_GUTS_DOWN, guts_lost);
 }
 
@@ -943,29 +1024,40 @@ void btlact_null1(void) {
 }
 
 void btlact_luck_up_1d4(void) {
-    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
-    battler* target = get_battler(CURRENT_TARGET);
+    unsigned char increase;
+    battler* target;
+    
+    increase = rand_limit(4) + 1; // 1-4 random increase
+    target = get_battler(CURRENT_TARGET);
     target->luck += increase;
     display_text_wait((const char*)MSG_BTL_LUCK_UP, increase);
 }
 
 void btlact_guts_up_1d4(void) {
-    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
-    battler* target = get_battler(CURRENT_TARGET);
+    unsigned char increase;
+    battler* target;
+    
+    increase = rand_limit(4) + 1; // 1-4 random increase
+    target = get_battler(CURRENT_TARGET);
     target->guts += increase;
     display_text_wait((const char*)MSG_BTL_GUTS_UP, increase);
 }
 
 // Batch converted stat up functions using template pattern
 void btlact_speed_up_1d4(void) {
-    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
-    battler* target = get_battler(CURRENT_TARGET);
+    unsigned char increase;
+    battler* target;
+    
+    increase = rand_limit(4) + 1; // 1-4 random increase
+    target = get_battler(CURRENT_TARGET);
     target->speed += increase;
     display_text_wait((const char*)MSG_BTL_SPEED_UP, increase);
 }
 
 void btlact_vitality_up_1d4(void) {
-    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
+    unsigned char increase;
+    
+    increase = rand_limit(4) + 1; // 1-4 random increase
     // TODO: Add vitality field to battler struct
     // battler* target = get_battler(CURRENT_TARGET);
     // target->vitality += increase;
@@ -973,7 +1065,9 @@ void btlact_vitality_up_1d4(void) {
 }
 
 void btlact_iq_up_1d4(void) {
-    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
+    unsigned char increase;
+    
+    increase = rand_limit(4) + 1; // 1-4 random increase
     // TODO: Add IQ field to battler struct to actually apply increase
     // battler* target = get_battler(CURRENT_TARGET);
     // target->iq += increase;
@@ -1043,16 +1137,20 @@ void btlact_level_2_attack_poison(void) {
 
 // Bottle rocket common function - multiple hit calculation
 void bottle_rocket_common(unsigned short count) {
-    unsigned short hits = 0;
+    unsigned short hits;
+    unsigned short i;
+    unsigned short damage;
     
-    for (unsigned short i = 0; i < count; i++) {
+    hits = 0;
+    
+    for (i = 0; i < count; i++) {
         if (success_speed(100) != 0) {
             hits++;
         }
     }
     
     if (hits > 0) {
-        unsigned short damage = hits * 120;
+        damage = hits * 120;
         damage = twenty_five_percent_variance(damage);
         calc_resist_damage(damage, 0xFF);
     } else {
@@ -1062,26 +1160,35 @@ void bottle_rocket_common(unsigned short count) {
 
 // Speed-based success check
 unsigned char success_speed(unsigned short threshold) {
-    battler* attacker = get_battler(CURRENT_ATTACKER);
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* attacker;
+    battler* target;
+    unsigned short attacker_speed;
+    unsigned short target_speed;
+    unsigned short speed_diff;
+    unsigned short random_val;
     
-    unsigned short attacker_speed = attacker->speed;
-    unsigned short target_speed = target->speed * 2;
-    unsigned short speed_diff = 0;
+    attacker = get_battler(CURRENT_ATTACKER);
+    target = get_battler(CURRENT_TARGET);
+    
+    attacker_speed = attacker->speed;
+    target_speed = target->speed * 2;
+    speed_diff = 0;
     
     if (target_speed >= attacker_speed) {
         speed_diff = target_speed - attacker_speed;
     }
     
-    unsigned short random_val = rand_limit(threshold);
+    random_val = rand_limit(threshold);
     return (random_val < speed_diff) ? 1 : 0;
 }
 
 // Brainshock alpha - inflicts strangeness
 void btlact_brainshock_alpha(void) {
+    battler* target;
+    
     if (fail_attack_on_npcs() != 0) return;
     
-    battler* target = get_battler(CURRENT_TARGET);
+    target = get_battler(CURRENT_TARGET);
     if (success_255(target->brainshock_resist) == 0) {
         display_battle_text_ptr(MSG_BTL_KIKANAI);
         return;
@@ -1106,19 +1213,24 @@ void btlact_lifeup_alpha(void) {
 
 // Pray mysterious - recovers 5±2.5 PP
 void btlact_pray_mysterious(void) {
-    unsigned short amount = fifty_percent_variance(5);
+    unsigned short amount;
+    
+    amount = fifty_percent_variance(5);
     if (amount == 0) amount = 1;
     recover_pp(CURRENT_TARGET, amount);
 }
 
 // Insect spray common - damages insect-type enemies
 void insect_spray_common(unsigned short damage) {
+    battler* target;
+    unsigned short final_damage;
+    
     if (success_luck80() == 0) {
         display_battle_text_ptr(MSG_BTL_KIKANAI);
         return;
     }
     
-    battler* target = get_battler(CURRENT_TARGET);
+    target = get_battler(CURRENT_TARGET);
     if (target->ally_or_enemy != 1) {
         display_battle_text_ptr(MSG_BTL_KIKANAI);
         return;
@@ -1129,7 +1241,7 @@ void insect_spray_common(unsigned short damage) {
         return;
     }
     
-    unsigned short final_damage = fifty_percent_variance(damage);
+    final_damage = fifty_percent_variance(damage);
     calc_resist_damage(final_damage, 0xFF);
 }
 
@@ -1144,6 +1256,10 @@ void btlact_shield_beta(void) {
 
 
 void btlact_level_4_atk(void) {
+    battler* attacker;
+    battler* target;
+    short damage;
+    
     // Check for miss
     if (miss_calc(0) != 0) return;
     
@@ -1157,10 +1273,10 @@ void btlact_level_4_atk(void) {
     }
     
     // Calculate damage: (attacker offense * 4) - target defense
-    battler* attacker = get_battler(CURRENT_ATTACKER);
-    battler* target = get_battler(CURRENT_TARGET);
+    attacker = get_battler(CURRENT_ATTACKER);
+    target = get_battler(CURRENT_TARGET);
     
-    short damage = (attacker->offense * 4) - target->defense;
+    damage = (attacker->offense * 4) - target->defense;
     
     if (damage > 0) {
         damage = twenty_five_percent_variance(damage);
@@ -1177,13 +1293,22 @@ void btlact_level_4_atk(void) {
 
 // Switch weapon - changes weapon during battle and handles special attack behavior
 void btlact_switch_weapons(void) {
-    battler* attacker = get_battler(CURRENT_ATTACKER);
+    battler* attacker;
+    unsigned char item_slot;
+    char_struct* character;
+    unsigned char offense_bonus;
+    unsigned char guts_bonus;
+    unsigned char weapon_slot;
+    unsigned char weapon_item_id;
+    unsigned short item_type;
+    
+    attacker = get_battler(CURRENT_ATTACKER);
     
     // Enable blinking triangle for equipment UI
     enable_blinking_triangle(1);
     
     // Check if the item slot is valid for this character
-    unsigned char item_slot = attacker->current_action_argument & 0xFF;
+    item_slot = attacker->current_action_argument & 0xFF;
     if (unknown_c3ee14(attacker->id, item_slot) == 0) {
         display_text_wait(get_battle_message(MSG_BTL_EQUIP_NG_WEAPON), 0);
         clear_blinking_prompt();
@@ -1191,11 +1316,11 @@ void btlact_switch_weapons(void) {
     }
     
     // Get character data pointer
-    char_struct* character = get_character_data(attacker->id - 1);
+    character = get_character_data(attacker->id - 1);
     
     // Store stat bonuses from current equipment before change
-    unsigned char offense_bonus = attacker->offense - attacker->base_offense;
-    unsigned char guts_bonus = attacker->guts - attacker->base_guts;
+    offense_bonus = attacker->offense - attacker->base_offense;
+    guts_bonus = attacker->guts - attacker->base_guts;
     
     // Equip the new weapon
     equip_item(attacker->id, attacker->action_item_slot & 0xFF);
@@ -1211,12 +1336,12 @@ void btlact_switch_weapons(void) {
     display_text_wait(get_battle_message(MSG_BTL_EQUIP_OK), 0);
     
     // Check if new weapon is a shooting weapon (type 1)
-    unsigned char weapon_slot = character->equipment[WEAPON];
+    weapon_slot = character->equipment[WEAPON];
     if (weapon_slot > 0) {
-        unsigned char weapon_item_id = character->items[weapon_slot - 1];
+        weapon_item_id = character->items[weapon_slot - 1];
         if (weapon_item_id > 0) {
             // Check item type from configuration table
-            unsigned short item_type = get_item_type(weapon_item_id);
+            item_type = get_item_type(weapon_item_id);
             
             if ((item_type & 0x03) == 1) { // Shooting weapon
                 // Use shooting attack (battle action 5)
@@ -1264,7 +1389,9 @@ void redirect_btlact_shield_b(void) {
 
 // Healing Alpha - cures specific status ailments
 void btlact_healing_a(void) {
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* target;
+    
+    target = get_battler(CURRENT_TARGET);
     
     if (target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_COLD) {
         target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] = 0;
@@ -1282,7 +1409,9 @@ void btlact_healing_a(void) {
 
 // Healing Omega - revives unconscious targets or cures all ailments
 void btlact_healing_omega(void) {
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* target;
+    
+    target = get_battler(CURRENT_TARGET);
     
     if (target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_UNCONSCIOUS) {
         revive_target(CURRENT_TARGET, target->hp_max);
@@ -1298,10 +1427,13 @@ void btlact_multi_bottle_rocket(void) {
 
 // Sudden Guts Pill - doubles target's guts stat
 void btlact_sudden_guts_pill(void) {
+    battler* target;
+    unsigned short new_guts;
+    
     if (fail_attack_on_npcs() != 0) return;
     
-    battler* target = get_battler(CURRENT_TARGET);
-    unsigned short new_guts = target->guts * 2;
+    target = get_battler(CURRENT_TARGET);
+    new_guts = target->guts * 2;
     if (new_guts > 255) new_guts = 255;
     
     target->guts = new_guts;
@@ -1310,7 +1442,9 @@ void btlact_sudden_guts_pill(void) {
 
 // Magnet Omega - PP drain spell (Jeff-specific behavior)
 void btlact_magnet_omega(void) {
-    battler* target = get_battler(CURRENT_TARGET);
+    battler* target;
+    
+    target = get_battler(CURRENT_TARGET);
     
     if (target->ally_or_enemy == 0 && target->id == PARTY_MEMBER_JEFF) {
         // Jeff can't use this on himself
@@ -1337,9 +1471,11 @@ void redirect_btlact_level_3_atk(void) {
 
 // Hypnosis Alpha - inflicts sleep status
 void btlact_hypnosis_a(void) {
+    battler* target;
+    
     if (fail_attack_on_npcs() != 0) return;
     
-    battler* target = get_battler(CURRENT_TARGET);
+    target = get_battler(CURRENT_TARGET);
     if (success_255(target->hypnosis_resist) == 0) {
         display_battle_text_ptr(MSG_BTL_KIKANAI);
         return;

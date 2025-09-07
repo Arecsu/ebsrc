@@ -1,5 +1,7 @@
-#include "include/hardware.h"
-#include "include/audio.h"
+#pragma code-name ("BANK02")
+
+#include "hardware.h"
+#include "audio.h"
 
 // Forward declarations for external functions
 extern unsigned short unknown_c0ac20(void);
@@ -160,18 +162,24 @@ void change_music(unsigned short track_id) {
     
     // Load music data packs (simplified)
     if (track_id > 0) {
-        unsigned short pack_index = track_id - 1;
-        unsigned char pack_id = MUSIC_DATASET_TABLE[pack_index].sequence_pack;
+        unsigned short pack_index;
+        unsigned char pack_id;
+        unsigned short pack_offset;
+        unsigned char bank;
+        unsigned short addr;
+        
+        pack_index = track_id - 1;
+        pack_id = MUSIC_DATASET_TABLE[pack_index].sequence_pack;
         
         // Load primary sample pack if different
         if (pack_id != CURRENT_SEQUENCE_PACK && pack_id != 0xFF) {
             CURRENT_SEQUENCE_PACK = pack_id;
             
-            unsigned short pack_offset = pack_id * 3;
-            unsigned char bank = ((unsigned char*)MUSIC_PACK_POINTER_TABLE)[pack_offset] & 0xFF;
+            pack_offset = pack_id * 3;
+            bank = ((unsigned char*)MUSIC_PACK_POINTER_TABLE)[pack_offset] & 0xFF;
             bank = get_audio_bank(bank);
             
-            unsigned short addr = *((unsigned short*)&((unsigned char*)MUSIC_PACK_POINTER_TABLE)[pack_offset + 1]);
+            addr = *((unsigned short*)&((unsigned char*)MUSIC_PACK_POINTER_TABLE)[pack_offset + 1]);
             addr &= SEQUENCE_PACK_MASK;
             
             load_spc700_data(bank, addr);
@@ -184,24 +192,33 @@ void change_music(unsigned short track_id) {
 
 // Load data to SPC700 audio processor
 void load_spc700_data(unsigned char bank, unsigned short addr) {
-    unsigned short spc_data_ptr_low = addr;
-    unsigned char spc_data_ptr_bank = bank;
-    unsigned short y_index = 0;
+    unsigned short spc_data_ptr_low;
+    unsigned char spc_data_ptr_bank;
+    unsigned short y_index;
     unsigned char temp_a;
     unsigned short temp_x;
     unsigned char nmitimen_backup;
+    unsigned short block_size;
+    unsigned short target_addr;
+    unsigned short data_byte;
+    unsigned short i;
+    
+    spc_data_ptr_low = addr;
+    spc_data_ptr_bank = bank;
+    y_index = 0;
     
     // Save current bank and direct page registers
 #ifndef TEST_COMPILATION
-    __asm__ volatile ("phb");
-    __asm__ volatile ("phd");
+    // TODO: Fix inline assembly for CC65 syntax
+    // __asm__ volatile ("phb");
+    // __asm__ volatile ("phd");
     
     // Set bank to 0 and direct page to 0  
-    __asm__ volatile ("pea $0000");
-    __asm__ volatile ("plb");
-    __asm__ volatile ("plb");
-    __asm__ volatile ("pea $0000");
-    __asm__ volatile ("pld");
+    // __asm__ volatile ("pea $0000");
+    // __asm__ volatile ("plb");
+    // __asm__ volatile ("plb");
+    // __asm__ volatile ("pea $0000");
+    // __asm__ volatile ("pld");
 #endif
     
     // Check if SPC700 is ready (should be 0xBBAA)
@@ -219,7 +236,7 @@ void load_spc700_data(unsigned char bank, unsigned short addr) {
     // Main data transfer loop
     while (1) {
         // Read block size from data
-        unsigned short block_size = *((volatile unsigned short*)((unsigned long)spc_data_ptr_bank << 16 | spc_data_ptr_low + y_index));
+        block_size = *((volatile unsigned short*)((unsigned long)spc_data_ptr_bank << 16 | spc_data_ptr_low + y_index));
         y_index += 2;
         
         if (block_size == 0) {
@@ -229,7 +246,7 @@ void load_spc700_data(unsigned char bank, unsigned short addr) {
         } else {
             // Read target address
             temp_x = block_size;
-            unsigned short target_addr = *((volatile unsigned short*)((unsigned long)spc_data_ptr_bank << 16 | spc_data_ptr_low + y_index));
+            target_addr = *((volatile unsigned short*)((unsigned long)spc_data_ptr_bank << 16 | spc_data_ptr_low + y_index));
             y_index += 2;
             *(volatile unsigned short*)APUIO2 = target_addr;
         }
@@ -250,8 +267,7 @@ void load_spc700_data(unsigned char bank, unsigned short addr) {
         if (block_size == 0) break; // End of data
         
         // Transfer data bytes
-        unsigned short data_byte;
-        for (unsigned short i = 0; i < temp_x; i++) {
+        for (i = 0; i < temp_x; i++) {
             data_byte = *((volatile unsigned char*)((unsigned long)spc_data_ptr_bank << 16 | spc_data_ptr_low + y_index));
             y_index++;
             
@@ -290,7 +306,8 @@ void load_spc700_data(unsigned char bank, unsigned short addr) {
     
     // Restore registers
 #ifndef TEST_COMPILATION
-    __asm__ volatile ("pld");
-    __asm__ volatile ("plb");
+    // TODO: Fix inline assembly for CC65 syntax
+    // __asm__ volatile ("pld");
+    // __asm__ volatile ("plb");
 #endif
 }

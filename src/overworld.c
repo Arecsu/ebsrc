@@ -1,5 +1,7 @@
-#include "include/hardware.h"
-#include "include/overworld.h"
+#pragma code-name ("BANK06")
+
+#include "hardware.h"
+#include "overworld.h"
 
 // Forward declarations for external functions
 extern void unknown_c2db3f(void);
@@ -23,7 +25,9 @@ void actionscript_animated_background_callback(void) {
 
 // Disable a hotspot by ID
 void disable_hotspot(unsigned short id) {
-    unsigned short hotspot_index = id - 1;
+    unsigned short hotspot_index;
+    
+    hotspot_index = id - 1;
     
     // Clear the hotspot mode
     ACTIVE_HOTSPOTS[hotspot_index].mode = 0;
@@ -44,7 +48,9 @@ void disable_current_entity_collision(void) {
 
 // Actionscript get position of party member
 void actionscript_get_position_of_party_member(void) {
-    unsigned char member_id = movement_data_read8();
+    unsigned char member_id;
+    
+    member_id = movement_data_read8();
     PARTY_MEMBER_TARGET = member_id;
     get_position_of_party_member();
 }
@@ -56,14 +62,17 @@ void change_music_5dd6(void) {
 
 // Set party tick callbacks for entity
 void set_party_tick_callbacks(unsigned short entity_id, unsigned short callback1, unsigned short callback2) {
-    unsigned short index = entity_id * 2;
+    unsigned short index;
+    int i;
+    
+    index = entity_id * 2;
     
     // Set first callback
     ENTITY_TICK_CALLBACK_LOW[index] = callback1;
     ENTITY_TICK_CALLBACK_HIGH[index] = callback2;
     
     // Set callbacks for next 6 entities (party members)
-    for (int i = 0; i < 6; i++) {
+    for (i = 0; i < 6; i++) {
         index += 2;
         ENTITY_TICK_CALLBACK_LOW[index] = callback1;
         ENTITY_TICK_CALLBACK_HIGH[index] = callback2;

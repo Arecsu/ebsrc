@@ -27,20 +27,38 @@ all: earthbound
 # Main build target - Pure C approach
 earthbound: extract build/earthbound.sfc
 
-# ROM data extraction (copyright compliance)
-extract:
-	@echo "Extracting ROM data from donor.sfc..."
+# ROM variant detection (detects US/JP/prototype from ROM header)
+detect-rom-variant:
+	@echo "Detecting ROM variant from donor.sfc..."
 	@if [ ! -f "donor.sfc" ]; then \
 		echo "ERROR: donor.sfc not found! Please provide your own EarthBound ROM."; \
 		echo "Place your ROM file as 'donor.sfc' in the project root."; \
 		exit 1; \
 	fi
-	./tools/ebbinex "earthbound.yml" "donor.sfc"
-	@echo "ROM data extraction complete."
+	@python3 tools/detect_rom_variant.py donor.sfc > detected_rom_variant.txt
+	@echo "Detected ROM variant: $$(cat detected_rom_variant.txt)"
+
+# ROM data extraction (copyright compliance with variant-specific YAML)
+extract: detect-rom-variant
+	@echo "Extracting ROM data using detected variant..."
+	@ROM_VARIANT=$$(cat detected_rom_variant.txt); \
+	case "$$ROM_VARIANT" in \
+		"US") YAML_CONFIG="earthbound.yml" ;; \
+		"US19950327") YAML_CONFIG="earthbound-1995-03-27.yml" ;; \
+		"JP") YAML_CONFIG="mother2.yml" ;; \
+		*) echo "ERROR: Unknown ROM variant $$ROM_VARIANT"; exit 1 ;; \
+	esac; \
+	echo "Using config: $$YAML_CONFIG for ROM variant: $$ROM_VARIANT"; \
+	./tools/ebbinex "$$YAML_CONFIG" "donor.sfc"
+	@echo "ROM data extraction complete using correct memory addresses."
 
 # Generate C bank files from current ASM→C conversion progress
 generate-c-banks:
 	@echo "Generating C bank files..."
+	@if [ ! -f "detected_rom_variant.txt" ]; then \
+		echo "ERROR: ROM variant not detected. Run 'make detect-rom-variant' first."; \
+		exit 1; \
+	fi
 	python3 tools/generate_c_banks.py
 	@echo "C bank file generation complete."
 
@@ -53,15 +71,24 @@ build/earthbound.sfc: build-c-objects build-system-vectors
 build-c-objects: $(BUILDDIR)
 	@echo "Compiling C source files..."
 	# Core C modules (already converted)
-	$(CC) $(CC65FLAGS) --code-name BANK01 -o "$(BUILDDIR)/battle.o" "$(SRCDIR)/battle.c"
-	$(CC) $(CC65FLAGS) --code-name BANK02 -o "$(BUILDDIR)/audio.o" "$(SRCDIR)/audio.c" 
-	$(CC) $(CC65FLAGS) --code-name BANK03 -o "$(BUILDDIR)/system.o" "$(SRCDIR)/system.c"
-	$(CC) $(CC65FLAGS) --code-name BANK04 -o "$(BUILDDIR)/psi.o" "$(SRCDIR)/psi.c"
-	$(CC) $(CC65FLAGS) --code-name BANK05 -o "$(BUILDDIR)/inventory.o" "$(SRCDIR)/inventory.c"
+	# First pass: CC65 C to ASM
+	$(CC) $(CC65FLAGS) --code-name BANK01 -o "$(BUILDDIR)/battle.s" "$(SRCDIR)/battle.c"
+	$(CC) $(CC65FLAGS) --code-name BANK02 -o "$(BUILDDIR)/audio.s" "$(SRCDIR)/audio.c" 
+	$(CC) $(CC65FLAGS) --code-name BANK03 -o "$(BUILDDIR)/system.s" "$(SRCDIR)/system.c"
+	$(CC) $(CC65FLAGS) --code-name BANK04 -o "$(BUILDDIR)/psi.s" "$(SRCDIR)/psi.c"
+	$(CC) $(CC65FLAGS) --code-name BANK05 -o "$(BUILDDIR)/inventory.s" "$(SRCDIR)/inventory.c"
+	
+	# Second pass: CA65 ASM to OBJ
+	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/battle.o" "$(BUILDDIR)/battle.s"
+	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/audio.o" "$(BUILDDIR)/audio.s"
+	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/system.o" "$(BUILDDIR)/system.s"
+	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/psi.o" "$(BUILDDIR)/psi.s"
+	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/inventory.o" "$(BUILDDIR)/inventory.s"
 	
 	# ROM data inclusion (generated C files with .incbin directives)
 	@if [ -f "$(SRCDIR)/rom_data_c.c" ]; then \
-		$(CC) $(CC65FLAGS) --code-name ROMDATA_GRAPHICS -o "$(BUILDDIR)/rom_data.o" "$(SRCDIR)/rom_data_c.c"; \
+		$(CC) $(CC65FLAGS) --code-name ROMDATA_GRAPHICS -o "$(BUILDDIR)/rom_data.s" "$(SRCDIR)/rom_data_c.c"; \
+		$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/rom_data.o" "$(BUILDDIR)/rom_data.s"; \
 	fi
 
 # System vectors (critical for SNES boot)

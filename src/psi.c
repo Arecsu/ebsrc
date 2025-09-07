@@ -1,7 +1,9 @@
-#include "include/hardware.h"
-#include "include/battle.h"
-#include "include/psi.h"
-#include "include/rom_data.h"
+#pragma code-name ("BANK04")
+
+#include "hardware.h"
+#include "battle.h"
+#include "psi.h"
+#include "rom_data.h"
 
 // Forward declarations for external functions
 extern unsigned short shields_common(unsigned char target, unsigned char shield_type);

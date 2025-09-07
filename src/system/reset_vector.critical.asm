@@ -4,4 +4,4 @@ RESET_VECTOR:
 	CLC
 	XCE
 .ENDIF
-	JMP f:RESET
+	JMP f:_reset_handler

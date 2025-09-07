@@ -1,17 +1,73 @@
-# ebsrc
+# EarthBound Decompilation Project
 
-This is currently a disassembly of the game known as Earthbound in the west and Mother 2 in the east.
+Converting EarthBound (Mother 2) from assembly to maintainable C code for cross-platform compatibility.
 
-Currently, I'm converting ASM to C code using LLMs whenever I can.
+## Quick Start
 
-Reference the [original repo](https://github.com/Herringway/ebsrc) in order to get a working build out of ASM files 
+### Prerequisites
+- CC65 compiler (for SNES builds)
+- Python 3 (for build tools)
+- Your own EarthBound ROM file as `donor.sfc`
 
-In this repo, ASM build is broken due to renaming files to ".converted.asm" which have been ported to C.
+### Build
+```bash
+# Build SNES ROM
+make -f Makefile.phase1
 
-## TODO
+# Test C compilation only
+make -f Makefile.c
+```
 
-**The main task is converting ASM to C. This is being tracked in the file TODO.md**
+## Project Status
 
-There are more markdown files scattered across the project directory. They all hold important information in some way. I'm still messing with an appropiate workflow to handle and referencing ROM data. Not striving for a bit-to-bit reprodudction. Only 100% functional in hopes we have clean code that can be ported to other platforms in the long run.
+**Phase 1: C89 Compliance & Build System** ✅ **COMPLETED**
+- All C files compile with CC65
+- Functional C→ASM→OBJ build pipeline  
+- System vectors integrated with C interrupt handlers
+- ROM data extraction system working
 
-For now, striving to have a working SNES build.
+**Phase 2: ASM→C Conversion** 🔄 **IN PROGRESS**  
+- Continue converting remaining ASM functions to C
+- Resolve runtime library dependencies
+- Implement missing global variables
+
+**Phase 3: Cross-Platform** ⏳ **PLANNED**
+- SDL builds for modern platforms
+- Asset loading system
+- Cross-platform compatibility layer
+
+## Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** - Project guidelines and conversion procedures. Yes we're vibing.
+- **[C89_CONVERSION_GUIDE.md](C89_CONVERSION_GUIDE.md)** - Technical reference for C89 compliance and build system
+- **[VUCC notes.md](VUCC%20notes.md)** - Original disassembly notes and function naming
+
+## Key Principles
+
+- **Functional equivalence** over bit-identical reproduction
+- **C89 compliance** for CC65 compatibility  
+- **Cross-platform foundation** for future SDL ports
+- **Copyright compliance** via user-provided ROM extraction
+
+## File Structure
+```
+src/           # C source files
+include/       # Header files  
+tools/         # Build and extraction tools
+build/         # Compiled output (generated)
+```
+
+## Contributing
+
+1. Read **C89_CONVERSION_GUIDE.md** for technical requirements
+2. Follow ASM→C conversion workflow in **CLAUDE.md**
+3. Test compilation: `cc65 -t none -O -I include src/file.c -o build/file.s`
+4. Mark converted ASM files with `.converted.asm` extension
+
+## References
+
+- [Original ASM disassembly repo](https://github.com/Herringway/ebsrc)
+
+## Copyright
+
+This project contains no copyrighted game data. Users must provide their own ROM files for data extraction.

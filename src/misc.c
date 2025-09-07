@@ -1,5 +1,7 @@
-#include "include/hardware.h"
-#include "include/misc.h"
+#pragma code-name ("BANK08")
+
+#include "hardware.h"
+#include "misc.h"
 
 // Forward declarations for external functions
 extern void recalc_character_postmath_offense(unsigned short character);

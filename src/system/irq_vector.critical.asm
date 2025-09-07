@@ -1,3 +1,3 @@
 
 IRQ_VECTOR:
-	JMP f:IRQ
+	JMP f:_irq_handler

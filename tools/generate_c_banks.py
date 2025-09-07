@@ -226,7 +226,32 @@ def main():
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
     
-    bank_config_dir = project_root / "src" / "bankconfig" / "US"
+    # Read detected ROM variant from file (created by detect-rom-variant target)
+    variant_file = project_root / "detected_rom_variant.txt"
+    if not variant_file.exists():
+        print("ERROR: detected_rom_variant.txt not found!")
+        print("Run 'make detect-rom-variant' first to detect your ROM variant.")
+        print("")
+        print("Falling back to US variant for now...")
+        rom_variant = "US"
+    else:
+        rom_variant = variant_file.read_text().strip()
+        print(f"Using detected ROM variant: {rom_variant}")
+    
+    # Use detected ROM variant directory
+    bank_config_dir = project_root / "src" / "bankconfig" / rom_variant
+    if not bank_config_dir.exists():
+        print(f"ERROR: Bank config directory not found: {bank_config_dir}")
+        print("This may indicate ROM extraction failed or wrong ROM variant detected.")
+        print("")
+        print("Available variants:")
+        bankconfig_root = project_root / "src" / "bankconfig"
+        if bankconfig_root.exists():
+            for variant_dir in bankconfig_root.iterdir():
+                if variant_dir.is_dir():
+                    print(f"  - {variant_dir.name}")
+        exit(1)
+    
     output_dir = project_root / "src" / "generated"
     
     # Create output directory
@@ -280,6 +305,7 @@ def main():
     total_rom_data = sum(len(data) for data in all_rom_data.values())
     
     print(f"\nGeneration Summary:")
+    print(f"  ROM variant: {rom_variant}")
     print(f"  Banks processed: {len(bank_files)}")
     print(f"  Total functions: {total_functions}")
     print(f"  Total ROM data files: {total_rom_data}")
@@ -287,7 +313,7 @@ def main():
     
     print(f"\nNext steps:")
     print(f"  1. Review generated C files in {output_dir}")
-    print(f"  2. Run 'make extract' to ensure ROM data is available")
+    print(f"  2. Run 'make extract' to ensure ROM data is available for {rom_variant}")
     print(f"  3. Run 'make earthbound' to build with Pure C system")
 
 if __name__ == "__main__":

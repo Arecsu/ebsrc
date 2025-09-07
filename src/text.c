@@ -1,5 +1,7 @@
-#include "include/hardware.h"
-#include "include/text.h"
+#pragma code-name ("BANK07")
+
+#include "hardware.h"
+#include "text.h"
 
 // Forward declarations
 extern unsigned short get_active_window_address(void);
