@@ -9,10 +9,11 @@ This document describes the architecture and design principles for converting th
 - **Complete ASM→C conversion** of 3,455 assembly files  
 - **Zero compilation warnings** with strict GCC flags
 - **Human-readable, maintainable code** without verbose ASM references
-- **Preserve original functionality** and behavior exactly
+- **Functional equivalence** - same behavior, not bit-identical reproduction
 - **ROM data integrity** - all text, graphics, audio from original ROM data
 - **Multi-variant support** - JP/US/prototype ROM variants
-- **Incremental conversion** - maintain build compatibility during transition
+- **Cross-platform portability** - foundation for SDL/modern platform ports
+- **Flexible memory layout** - allow compiler optimization and code growth
 
 
 ## Architecture Layers
@@ -43,10 +44,15 @@ dumpEntries:
 .GLOBAL MSG_BTL_CHECK_OFFENSE: far
 ```
 
-**Memory Layout** (snes.cfg): Defines ROM bank mapping and memory segments
+**Memory Layout** (snes.cfg): Flexible segment mapping for modern development
 ```
 MEMORY {
     ROM: start = $C00000, size = $300000, fill = yes, type = ro;
+}
+SEGMENTS {
+    CODE:     load = ROM, type = ro;           # C code (flexible placement)
+    ROMDATA:  load = ROM, type = ro;           # Fixed ROM data (.incbin)
+    VECTORS:  load = ROM, start = $00FFE4;     # Hardware vectors (fixed)
 }
 ```
 
@@ -90,13 +96,111 @@ void btlact_spy(void) {
 
 ### Layer 4: Build System Integration
 
-**Future C Build:**
+## Multi-Phase Development Strategy
+
+### **Phase 1: SNES Foundation (Current Focus)**
+**Goal**: Functional SNES ROM with clean C codebase
+
+**Build System:**
 ```
-C files → GCC → C Objects → ld65 → ROM (.sfc)
-ROM Data → Generator → rom_data.h ┘
+C files → CC65 → C Objects → ld65 → SNES ROM (.sfc)
+ROM Data (.bin) → .incbin → Fixed ROM segments ┘
 ```
 
-The final build system will be pure C code compiled with GCC, then linked with ld65 using the same memory layout and ROM data as the original ASM system.
+**Data Strategy:**
+- Keep existing binary formats (`.lzhal`, `.bin`, `.pal`, etc.)
+- Use `.incbin` inclusion for minimal disruption
+- Create clean C data access layer over raw binary data
+- Focus on **functional equivalence**, not bit-identical reproduction
+
+**Current Work:** All ASM→C conversion work is **Phase 1** development
+
+**Phase 1 Implementation:** Pure C build system (see BUILD_PHASE1.md for detailed documentation)
+
+#### Pure C Build Architecture:
+```
+User ROM → Extract Tool → Generated Data → Pure C Build → SNES ROM
+donor.sfc    ebbinex      src/bin/       CC65 only     earthbound.sfc
+(not in repo)             (gitignored)   (no ASM mixing)
+```
+
+**Copyright Compliance:**
+- ✅ No ROM data in repository
+- ✅ User-provided ROM extraction  
+- ✅ Generated files only (src/bin/ gitignored)
+- ✅ Pure C source code committed to repo
+
+### **Phase 2: Cross-Platform Preparation (Future)**
+**Goal**: Modern development experience and tooling
+
+**Enhanced Build System:**
+```
+C files → CC65 → SNES ROM (.sfc)          # SNES target
+C files → GCC  → SDL Executable           # Development target
+```
+
+**Data Transformation:**
+- Convert binary assets to developer-friendly formats
+- Implement asset conversion tools (`tools/convert_*.py`)
+- Add structured data formats for maps, sprites, text
+
+**Examples:**
+```c
+// Graphics: Binary → Structured
+typedef struct {
+    unsigned char width, height;
+    unsigned char* pixel_data;
+    char filename[64];  // SDL: load PNG files
+} sprite_frame_t;
+
+// Text: Symbol files → JSON  
+// messages.json - Easy localization
+{
+  "battle": {
+    "hp_drain": "HP was drained!",
+    "miss": "The attack missed!"
+  }
+}
+
+// Maps: Binary arrangements → Structured data
+typedef struct {
+    unsigned short width, height;
+    unsigned short tileset_id;
+    unsigned short* tile_data;
+    collision_data_t* collisions;
+    npc_spawn_t* npcs;
+} map_t;
+```
+
+### **Phase 3: Multi-Platform Release (Long-term)**
+**Goal**: SDL executable for modern platforms
+
+**Multi-Platform Build:**
+```
+C files → GCC/Clang → Native Executable (Linux/Windows/Mac/mobile/web)
+PNG/JSON/OGG → Asset Loader → Runtime resources ┘
+```
+
+**Cross-Platform Asset System:**
+```c
+// Unified asset loading
+#ifdef SNES_BUILD
+    const unsigned char* data = get_rom_asset(asset_id);
+#else  
+    asset_t* data = load_asset_file(asset_filename);
+#endif
+```
+
+**Benefits:**
+- **Easy localization** - JSON text files
+- **Graphics modding** - PNG sprite replacement  
+- **Audio modding** - OGG/WAV audio files
+- **Map editing** - Human-readable data formats
+- **Modern debugging** - Standard development tools
+
+---
+
+**Current Priority**: Phase 1 development - ASM→C conversion with `.incbin` data access
 
 ## Directory Structure
 

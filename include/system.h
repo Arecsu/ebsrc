@@ -41,11 +41,24 @@ unsigned short truncate_16_to_8(unsigned short value, unsigned short multiplier)
 short asr16(short value);
 short modulus16s(short dividend, short divisor);
 unsigned char rand_custom(void);
+unsigned short rand_mod(unsigned short modulus);
+unsigned long rand_long(void);
+void enable_nmi_joypad(void);
+void default_irq_callback(void);
+void set_bg3_vram_location(unsigned char tilemap_config, unsigned short tilemap_addr, unsigned short tile_addr);
+void set_bg4_vram_location(unsigned char tilemap_config, unsigned short tilemap_addr, unsigned short tile_addr);
+void alloc_sprite_mem(unsigned char slot_id, unsigned char sprite_size);
+unsigned char test_sram_size(void);
+void fade_in(unsigned char step, unsigned char delay);
+void fade_out(unsigned char step, unsigned char delay);
 char modulus8s(char dividend, char divisor);
 unsigned char asr8(unsigned char value, unsigned char shift_count);
 unsigned short asl16(unsigned short value, unsigned char shift_count);
 unsigned char division8s(char dividend, char divisor);
 unsigned char division8(char dividend, char divisor);
+unsigned long asl32(unsigned long value, unsigned char shift_count);
+long asr32(long value, unsigned char shift_count);
+unsigned short modulus16(unsigned short dividend, unsigned short divisor);
 void animate_palette(void);
 
 #endif

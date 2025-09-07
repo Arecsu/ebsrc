@@ -1,0 +1,116 @@
+#!/usr/bin/make -f
+# EarthBound Pure C Build System - Phase 1
+# Copyright-safe build using CC65 for C compilation + ROM data extraction
+
+# Build configuration
+BUILDDIR = build
+CC = cc65
+AS = ca65  
+LD = ld65
+SRCDIR = src
+
+# CC65 flags for SNES development
+CC65FLAGS = -t none --cpu 65816 -O -I include -I $(SRCDIR)
+CA65FLAGS = -t none --cpu 65816 --include-dir include --include-dir $(SRCDIR) --bin-include-dir $(BUILDDIR)
+LD65FLAGS = -C snes_phase1.cfg
+
+# Target variants
+JPID = JP
+USID = US
+USPROTOID = US19950327
+
+# Default target
+.PHONY: all earthbound clean extract
+
+all: earthbound
+
+# Main build target - Pure C approach
+earthbound: extract build/earthbound.sfc
+
+# ROM data extraction (copyright compliance)
+extract:
+	@echo "Extracting ROM data from donor.sfc..."
+	@if [ ! -f "donor.sfc" ]; then \
+		echo "ERROR: donor.sfc not found! Please provide your own EarthBound ROM."; \
+		echo "Place your ROM file as 'donor.sfc' in the project root."; \
+		exit 1; \
+	fi
+	./tools/ebbinex "earthbound.yml" "donor.sfc"
+	@echo "ROM data extraction complete."
+
+# Generate C bank files from current ASM→C conversion progress
+generate-c-banks:
+	@echo "Generating C bank files..."
+	python3 tools/generate_c_banks.py
+	@echo "C bank file generation complete."
+
+# Build system - Pure C compilation
+build/earthbound.sfc: build-c-objects build-system-vectors
+	@echo "Linking final ROM..."
+	$(LD) $(LD65FLAGS) --mapfile "build/earthbound.map" -o "$@" build/*.o
+
+# Compile all C source files
+build-c-objects: $(BUILDDIR)
+	@echo "Compiling C source files..."
+	# Core C modules (already converted)
+	$(CC) $(CC65FLAGS) --code-name BANK01 -o "$(BUILDDIR)/battle.o" "$(SRCDIR)/battle.c"
+	$(CC) $(CC65FLAGS) --code-name BANK02 -o "$(BUILDDIR)/audio.o" "$(SRCDIR)/audio.c" 
+	$(CC) $(CC65FLAGS) --code-name BANK03 -o "$(BUILDDIR)/system.o" "$(SRCDIR)/system.c"
+	$(CC) $(CC65FLAGS) --code-name BANK04 -o "$(BUILDDIR)/psi.o" "$(SRCDIR)/psi.c"
+	$(CC) $(CC65FLAGS) --code-name BANK05 -o "$(BUILDDIR)/inventory.o" "$(SRCDIR)/inventory.c"
+	
+	# ROM data inclusion (generated C files with .incbin directives)
+	@if [ -f "$(SRCDIR)/rom_data_c.c" ]; then \
+		$(CC) $(CC65FLAGS) --code-name ROMDATA_GRAPHICS -o "$(BUILDDIR)/rom_data.o" "$(SRCDIR)/rom_data_c.c"; \
+	fi
+
+# System vectors (critical for SNES boot)
+build-system-vectors: $(BUILDDIR)
+	@echo "Assembling system vectors..."
+	# These MUST stay as ASM - required for SNES boot (.critical.asm extension)
+	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/vectors.o" "$(SRCDIR)/system/vectors.critical.asm"
+
+# Create build directory
+$(BUILDDIR):
+	@mkdir -p $(BUILDDIR)
+
+# Clean build artifacts
+clean:
+	@echo "Cleaning build directory..."
+	@rm -rf $(BUILDDIR)
+	@echo "Clean complete."
+
+# Development targets
+test-build: earthbound
+	@echo "Build test completed successfully!"
+	@ls -la build/earthbound.sfc
+
+# ROM data status
+check-rom-data:
+	@echo "ROM data extraction status:"
+	@if [ -d "src/bin" ]; then \
+		echo "✓ ROM data extracted (src/bin/ exists)"; \
+		find src/bin -name "*.bin" | wc -l | sed 's/^/  Binary files: /'; \
+		find src/bin -name "*.lzhal" | wc -l | sed 's/^/  Compressed files: /'; \
+	else \
+		echo "✗ ROM data not extracted (run 'make extract' first)"; \
+	fi
+
+# Help target
+help:
+	@echo "EarthBound Pure C Build System"
+	@echo "==============================="
+	@echo ""
+	@echo "Quick Start:"
+	@echo "  1. Place your EarthBound ROM as 'donor.sfc'"
+	@echo "  2. Run 'make extract' to extract ROM data"  
+	@echo "  3. Run 'make' to build the ROM"
+	@echo ""
+	@echo "Available targets:"
+	@echo "  all/earthbound  - Build complete SNES ROM"
+	@echo "  extract         - Extract ROM data from donor.sfc"
+	@echo "  generate-c-banks - Generate C files from ASM bank structure"
+	@echo "  clean           - Clean build directory"
+	@echo "  test-build      - Build and verify output"
+	@echo "  check-rom-data  - Check ROM data extraction status"
+	@echo "  help            - Show this help"

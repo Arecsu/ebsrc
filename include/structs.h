@@ -107,6 +107,7 @@ typedef struct {
     unsigned short pp_max;
     unsigned short pp_target;
     unsigned short hp_target;    // Added missing field
+    unsigned char afflictions[AFFLICTION_GROUP_COUNT]; // Status effects by group
     unsigned short offense;
     unsigned short defense;
     unsigned char fire_resist;

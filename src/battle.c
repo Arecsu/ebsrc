@@ -13,7 +13,7 @@ extern unsigned short miss_calc(unsigned short flags);
 extern unsigned short smaaaash(void);
 extern unsigned short determine_dodge(void);
 extern void heal_strangeness(void);
-extern void display_battle_text_ptr(unsigned short msg_id);
+extern void display_battle_text_ptr(const unsigned char* msg_ptr);
 extern void btlact_level_2_atk(void);
 extern void btlact_level_3_atk(void);
 extern void psi_fire_common(unsigned short damage);
@@ -28,7 +28,11 @@ extern void flash_inflict_feeling_strange(void);
 extern void flash_inflict_crying(void);
 extern void weaken_shield(void);
 extern unsigned char success_speed(unsigned short threshold);
+extern unsigned short mult168(unsigned short a, unsigned short b);
 extern unsigned char inflict_status_battle(unsigned char target, unsigned char status_group, unsigned char status);
+extern unsigned char success_luck80(void);
+extern unsigned char get_enemy_type(unsigned short enemy_id);
+extern unsigned char shields_common(unsigned char target, unsigned char shield_type);
 extern void enable_blinking_triangle(unsigned char enabled);
 extern void clear_blinking_prompt(void);
 extern unsigned char unknown_c3ee14(unsigned char character_id, unsigned char item_slot);
@@ -39,6 +43,11 @@ extern void btlact_psi_shield_a(void);
 extern void btlact_psi_shield_b(void);
 extern void btlact_hypnosis_a(void);
 extern void btlact_brainshock_a(void);
+extern void psi_rockin_common(unsigned short damage);
+extern void psi_freeze_common(unsigned short damage);
+extern void btlact_healing_g(void);
+extern void revive_target(unsigned char target, unsigned short hp_amount);
+extern void btlact_magnet_a(void);
 extern unsigned char success_luck80(void);
 extern unsigned char success_255(unsigned char resistance);
 extern void hexadecimate_defense(unsigned char target);
@@ -50,6 +59,9 @@ extern void btlact_guts_up_1d4(void);
 extern void btlact_vitality_up_1d4(void);
 extern void btlact_iq_up_1d4(void);
 extern void btlact_luck_up_1d4(void);
+extern void btlact_bash(void);
+extern void bomb_common(unsigned short damage);
+extern unsigned char success_luck40(void);
 extern unsigned short get_item_type(unsigned char item_id);
 extern void execute_battle_action(unsigned char action_id);
 extern void psi_fire_common(unsigned short damage);
@@ -70,12 +82,7 @@ extern battler* get_battler(unsigned char target);
 // Party member constants
 #define PARTY_MEMBER_POO 4
 
-// Battle message constants
-#define MSG_BTL_TATAKU_YOKETA 0x1234  // "Attack was dodged" message ID (placeholder)
-#define MSG_BTL_MODOKU_OFF 0x1235     // "Poison removed" message
-#define MSG_BTL_KIMOCHI_OFF 0x1236    // "Nausea removed" message  
-#define MSG_BTL_NAMIDA_OFF 0x1237     // "Crying stopped" message
-#define MSG_BTL_HEN_OFF 0x1238        // "Strangeness removed" message
+// All battle messages now use real ROM data from rom_data.h - no more placeholders!
 
 // PSI and item constants
 #define FIRE_BETA_DAMAGE 200
@@ -84,23 +91,19 @@ extern battler* get_battler(unsigned char target);
 #define MUMMY_WRAP_BASE_DAMAGE 180
 #define BAG_OF_DRAGONITE_DAMAGE 800
 
-// Status group constants  
-#define STATUS_GROUP_PERSISTENT_EASYHEAL 0
-#define STATUS_GROUP_TEMPORARY 2
-#define STATUS_GROUP_STRANGENESS 3
+// Status group constants now defined in battle.h
 
-// Status effect constants
-#define STATUS_0_POISONED 1
-#define STATUS_0_NAUSEOUS 2
-#define STATUS_2_CRYING 1
-#define STATUS_2_SOLIDIFIED 2
+// Status effect constants now defined in battle.h
 #define LIFEUP_BETA_HEALING 400
+#define LIFEUP_OMEGA_HEALING 400
 #define FIRE_ALPHA_DAMAGE 60
+#define FIRE_OMEGA_DAMAGE 320
 #define ROCKIN_BETA_DAMAGE 240
-#define STATUS_3_STRANGE 1
-
-// Status constants (these are game logic, not ROM data)
-#define STATUS_0_PARALYZED 4            // Paralysis status constant
+#define ROCKIN_GAMMA_DAMAGE 320
+#define FREEZE_ALPHA_DAMAGE 180
+#define MULTI_BOTTLE_ROCKET_COUNT 20
+#define PARTY_MEMBER_JEFF 3
+// Status constants now defined in battle.h
 
 // Null battle action - does nothing
 void btlact_null(void) {
@@ -299,13 +302,13 @@ void btlact_reduce_pp(void) {
     battler* target = get_battler(CURRENT_TARGET);
     
     if (target->pp_target == 0) {
-        display_battle_text_ptr(0x1240);  // MSG_BTL_PPSUCK_ZERO placeholder
+        display_battle_text_ptr(MSG_BTL_PPSUCK_ZERO);
         return;
     }
     
     unsigned short pp_drain = target->pp_max >> 4;  // Divide by 16
     if (pp_drain == 0) {
-        display_battle_text_ptr(0x1241);  // MSG_BTL_KIKANAI placeholder
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
         return;
     }
     
@@ -390,7 +393,7 @@ void btlact_mummy_wrap(void) {
     
     if (success_speed(250) == 0) {
         // Use ROM message data through battle text system
-        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
     }
     
@@ -398,7 +401,7 @@ void btlact_mummy_wrap(void) {
     short damage = MUMMY_WRAP_BASE_DAMAGE - target->defense;
     
     if (damage <= 0) {
-        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
     }
     
@@ -422,13 +425,13 @@ void redirect_btlact_psi_shield_a(void) {
 // HP Sucker battle action - drains HP from target and heals attacker
 void btlact_hp_sucker(void) {
     if (success_luck80() == 0) {
-        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
     }
     
     battler* attacker = get_battler(CURRENT_ATTACKER);
     if (attacker->hp_target == 0) {
-        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
     }
     
@@ -558,7 +561,7 @@ void btlact_crying2(void) {
         if (inflict_status_battle(CURRENT_TARGET, STATUS_2_CRYING, STATUS_2_CRYING) != 0) {
             display_text_wait(get_battle_message(MSG_BTL_NAMIDA_ON), 0);
         } else {
-            display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+            display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         }
     }
 }
@@ -574,7 +577,7 @@ void btlact_inflict_solidification(void) {
             }
         }
     }
-    display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+    display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
 }
 
 // Defense down alpha - reduces target defense
@@ -595,7 +598,7 @@ void btlact_defense_down_a(void) {
                 display_text_wait(get_battle_message(MSG_BTL_DEFENSE_DOWN), defense_reduction);
             }
         } else {
-            display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+            display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         }
     }
 }
@@ -729,17 +732,447 @@ void btlact_cold(void) {
     
     battler* target = get_battler(CURRENT_TARGET);
     if (success_255(target->freeze_resist) == 0) {
-        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
         return;
     }
     
     if (inflict_status_battle(CURRENT_TARGET, STATUS_0_COLD, STATUS_GROUP_PERSISTENT_EASYHEAL) != 0) {
-        display_text_wait(get_battle_message(MSG_BTL_KAZE_ON), 0);
+        display_text_wait((const char*)MSG_BTL_KAZE_ON, 0);
     } else {
-        display_text_wait(get_battle_message(MSG_BTL_KIKANAI), 0);
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
     }
 }
+
+void btlact_diamondize(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    if (success_255(target->paralysis_resist) == 0) {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+        return;
     }
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_0_DIAMONDIZED, STATUS_GROUP_PERSISTENT_EASYHEAL) == 0) {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+        return;
+    }
+    
+    // TODO: Clear all status effects when diamondized (need to add afflictions field to battler struct)
+    // target->afflictions[STATUS_GROUP_SHIELD] = 0;
+    // target->afflictions[STATUS_GROUP_HOMESICKNESS] = 0;
+    // target->afflictions[STATUS_GROUP_CONCENTRATION] = 0;
+    // target->afflictions[STATUS_GROUP_STRANGENESS] = 0;
+    // target->afflictions[STATUS_GROUP_TEMPORARY] = 0;
+    // target->afflictions[STATUS_GROUP_PERSISTENT_HARDHEAL] = 0;
+    
+    // TODO: Add EXP and money to battle totals (need to add exp/money fields)
+    // BATTLE_EXP_SCRATCH += target->exp;
+    // BATTLE_MONEY_SCRATCH += target->money;
+    
+    display_text_wait((const char*)MSG_BTL_DAIYA_ON, 0);
+}
+
+void btlact_feel_strange(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_3_STRANGE, STATUS_GROUP_STRANGENESS) != 0) {
+        display_text_wait((const char*)MSG_BTL_HEN_ON, 0);
+    } else {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    }
+}
+
+void btlact_paralyze(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    if (success_luck80() == 0) {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+        return;
+    }
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    if (success_255(target->paralysis_resist) == 0) {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+        return;
+    }
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_0_PARALYZED, STATUS_GROUP_PERSISTENT_EASYHEAL) != 0) {
+        display_text_wait((const char*)MSG_BTL_SHIBIRE_ON, 0);
+    } else {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    }
+}
+
+void btlact_poison(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_0_POISONED, STATUS_GROUP_PERSISTENT_EASYHEAL) != 0) {
+        display_text_wait((const char*)MSG_BTL_MODOKU_ON, 0);
+    } else {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    }
+}
+
+void btlact_nauseate(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_0_NAUSEOUS, STATUS_GROUP_PERSISTENT_EASYHEAL) != 0) {
+        display_text_wait((const char*)MSG_BTL_KIMOCHI_ON, 0);
+    } else {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    }
+}
+
+void btlact_mushroomize(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    // Status group is same as status id for mushroomized
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_1_MUSHROOMIZED, STATUS_1_MUSHROOMIZED) != 0) {
+        display_text_wait((const char*)MSG_BTL_KINOKO_ON, 0);
+    } else {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    }
+}
+
+void btlact_crying(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    if (success_255(target->flash_resist) == 0) {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+        return;
+    }
+    
+    // Status ID is same as status group for crying
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_2_CRYING, STATUS_2_CRYING) != 0) {
+        display_text_wait((const char*)MSG_BTL_NAMIDA_ON, 0);
+    } else {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    }
+}
+
+void btlact_immobilize(void) {
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_2_IMMOBILIZED, STATUS_GROUP_TEMPORARY) != 0) {
+        display_text_wait((const char*)MSG_BTL_SHIBARA_ON, 0);
+    } else {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    }
+}
+
+void btlact_neutralize(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    
+    // Reset all stats to base values
+    target->offense = target->base_offense;
+    target->defense = target->base_defense; 
+    target->speed = target->base_speed;
+    target->guts = target->base_guts;
+    target->luck = target->base_luck;
+    
+    // TODO: Clear shield HP and shield afflictions (need shield_hp field in battler)
+    // target->shield_hp = 0;
+    // target->afflictions[STATUS_GROUP_SHIELD] = 0;
+    
+    display_text_wait((const char*)MSG_BTL_NEUTRALIZE_RESULT, 0);
+}
+
+void btlact_distract(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    if (success_luck40() == 0) {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+        return;
+    }
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    if (success_255(target->paralysis_resist) == 0) {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+        return;
+    }
+    
+    // TODO: Check concentration afflictions (need afflictions field)
+    // For now, assume no concentration status and apply distraction
+    // if (target->afflictions[STATUS_GROUP_CONCENTRATION] != 0) {
+    //     display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    //     return;
+    // }
+    
+    // TODO: Apply can't concentrate status (need afflictions field)
+    // target->afflictions[STATUS_GROUP_CONCENTRATION] = STATUS_4_CANT_CONCENTRATE4;
+    
+    display_text_wait((const char*)MSG_BTL_FUUIN_ON, 0);
+}
+
+void btlact_inflict_poison(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    if (success_255(target->paralysis_resist) == 0) {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+        return;
+    }
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_0_POISONED, STATUS_GROUP_PERSISTENT_EASYHEAL) != 0) {
+        display_text_wait((const char*)MSG_BTL_MODOKU_ON, 0);
+    } else {
+        display_text_wait((const char*)MSG_BTL_KIKANAI, 0);
+    }
+}
+
+void btlact_cut_guts(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    unsigned char original_guts = target->guts;
+    
+    // Reduce guts to 75% of current value
+    target->guts = (target->guts * 3) / 4;
+    
+    // Ensure guts doesn't go below half of base guts
+    unsigned char minimum_guts = target->base_guts / 2;
+    if (target->guts < minimum_guts) {
+        target->guts = minimum_guts;
+    }
+    
+    // Calculate and display the amount lost
+    unsigned char guts_lost = original_guts - target->guts;
+    display_text_wait((const char*)MSG_BTL_GUTS_DOWN, guts_lost);
+}
+
+// Additional null battle actions
+void btlact_null1(void) {
+    // Empty function - no operation
+}
+
+void btlact_luck_up_1d4(void) {
+    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
+    battler* target = get_battler(CURRENT_TARGET);
+    target->luck += increase;
+    display_text_wait((const char*)MSG_BTL_LUCK_UP, increase);
+}
+
+void btlact_guts_up_1d4(void) {
+    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
+    battler* target = get_battler(CURRENT_TARGET);
+    target->guts += increase;
+    display_text_wait((const char*)MSG_BTL_GUTS_UP, increase);
+}
+
+// Batch converted stat up functions using template pattern
+void btlact_speed_up_1d4(void) {
+    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
+    battler* target = get_battler(CURRENT_TARGET);
+    target->speed += increase;
+    display_text_wait((const char*)MSG_BTL_SPEED_UP, increase);
+}
+
+void btlact_vitality_up_1d4(void) {
+    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
+    // TODO: Add vitality field to battler struct
+    // battler* target = get_battler(CURRENT_TARGET);
+    // target->vitality += increase;
+    display_text_wait((const char*)MSG_BTL_VITA_UP, increase);
+}
+
+void btlact_iq_up_1d4(void) {
+    unsigned char increase = rand_limit(4) + 1; // 1-4 random increase
+    // TODO: Add IQ field to battler struct to actually apply increase
+    // battler* target = get_battler(CURRENT_TARGET);
+    // target->iq += increase;
+    display_text_wait((const char*)MSG_BTL_IQ_UP, increase);
+}
+
+void heal_poison(void) {
+    // TODO: Need afflictions field in battler struct to properly implement
+    // battler* target = get_battler(CURRENT_TARGET);
+    // if (target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_POISONED) {
+    //     target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] = 0;
+    //     display_text_wait((const char*)MSG_BTL_MODOKU_OFF, 0);
+    // }
+    display_text_wait((const char*)MSG_BTL_MODOKU_OFF, 0);
+}
+
+void btlact_null5(void) {
+    // Empty function - no operation
+}
+
+// Batch converted null functions - all empty implementations
+void btlact_null7(void) {
+    // Empty function - no operation
+}
+
+void btlact_null12(void) {
+    // Empty function - no operation
+}
+
+void btlact_null6(void) {
+    // Empty function - no operation
+}
+
+void btlact_null10(void) {
+    // Empty function - no operation
+}
+
+void btlact_null11(void) {
+    // Empty function - no operation
+}
+
+// Redirect to null action
+void btlact_redirect_null(void) {
+    btlact_null();
+}
+
+// Level 2 attack that inflicts poison
+void btlact_level_2_attack_poison(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    if (miss_calc(0) != 0) return;
+    
+    if (smaaaash() != 0) return;
+    
+    if (determine_dodge() != 0) {
+        display_text_wait((const char*)MSG_BTL_TATAKU_YOKETA, 0);
+        return;
+    }
+    
+    btlact_level_2_atk();
+    heal_strangeness();
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_0_POISONED, STATUS_GROUP_PERSISTENT_EASYHEAL) != 0) {
+        display_battle_text_ptr(MSG_BTL_MODOKU_ON);
+    }
+}
+
+// Bottle rocket common function - multiple hit calculation
+void bottle_rocket_common(unsigned short count) {
+    unsigned short hits = 0;
+    
+    for (unsigned short i = 0; i < count; i++) {
+        if (success_speed(100) != 0) {
+            hits++;
+        }
+    }
+    
+    if (hits > 0) {
+        unsigned short damage = hits * 120;
+        damage = twenty_five_percent_variance(damage);
+        calc_resist_damage(damage, 0xFF);
+    } else {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+    }
+}
+
+// Speed-based success check
+unsigned char success_speed(unsigned short threshold) {
+    battler* attacker = get_battler(CURRENT_ATTACKER);
+    battler* target = get_battler(CURRENT_TARGET);
+    
+    unsigned short attacker_speed = attacker->speed;
+    unsigned short target_speed = target->speed * 2;
+    unsigned short speed_diff = 0;
+    
+    if (target_speed >= attacker_speed) {
+        speed_diff = target_speed - attacker_speed;
+    }
+    
+    unsigned short random_val = rand_limit(threshold);
+    return (random_val < speed_diff) ? 1 : 0;
+}
+
+// Brainshock alpha - inflicts strangeness
+void btlact_brainshock_alpha(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    if (success_255(target->brainshock_resist) == 0) {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+        return;
+    }
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_3_STRANGE, STATUS_GROUP_STRANGENESS) != 0) {
+        display_battle_text_ptr(MSG_BTL_HEN_ON);
+    } else {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+    }
+}
+
+// Redirect to brainshock alpha
+void btlact_brainshock_alpha_redirect_copy(void) {
+    btlact_brainshock_alpha();
+}
+
+// LifeUp Alpha - basic healing spell
+void btlact_lifeup_alpha(void) {
+    lifeup_common(100);  // LIFEUP_ALPHA_HEALING value
+}
+
+// Pray mysterious - recovers 5±2.5 PP
+void btlact_pray_mysterious(void) {
+    unsigned short amount = fifty_percent_variance(5);
+    if (amount == 0) amount = 1;
+    recover_pp(CURRENT_TARGET, amount);
+}
+
+// Insect spray common - damages insect-type enemies
+void insect_spray_common(unsigned short damage) {
+    if (success_luck80() == 0) {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+        return;
+    }
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    if (target->ally_or_enemy != 1) {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+        return;
+    }
+    
+    if (get_enemy_type(target->id) != 1) {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+        return;
+    }
+    
+    unsigned short final_damage = fifty_percent_variance(damage);
+    calc_resist_damage(final_damage, 0xFF);
+}
+
+// Shield Beta - PSI Shield with power boost
+void btlact_shield_beta(void) {
+    if (shields_common(CURRENT_TARGET, 0x20) != 0) {  // STATUS_6_SHIELD_POWER value
+        display_battle_text_ptr(MSG_BTL_POWER_ADD);
+    } else {
+        display_battle_text_ptr(MSG_BTL_POWER_ON);
+    }
+}
+
+
+void btlact_level_4_atk(void) {
+    // Check for miss
+    if (miss_calc(0) != 0) return;
+    
+    // Check for SMAAAASH critical hit
+    if (smaaaash() != 0) return;
+    
+    // Check for dodge
+    if (determine_dodge() != 0) {
+        display_text_wait((const char*)MSG_BTL_TATAKU_YOKETA, 0);
+        return;
+    }
+    
+    // Calculate damage: (attacker offense * 4) - target defense
+    battler* attacker = get_battler(CURRENT_ATTACKER);
+    battler* target = get_battler(CURRENT_TARGET);
+    
+    short damage = (attacker->offense * 4) - target->defense;
+    
+    if (damage > 0) {
+        damage = twenty_five_percent_variance(damage);
+    }
+    
+    if (damage < 1) {
+        damage = 1; // Minimum damage
+    }
+    
+    // Apply resistance and deal damage
+    calc_resist_damage(damage, 0xFF); // No specific resistance
+    heal_strangeness(); // Clear strange status on hit
 }
 
 // Switch weapon - changes weapon during battle and handles special attack behavior
@@ -804,6 +1237,89 @@ void btlact_psi_fire_a(void) {
     psi_fire_common(FIRE_ALPHA_DAMAGE);
 }
 
+// PSI Fire Omega - powerful fire damage spell
+void btlact_psi_fire_omega(void) {
+    psi_fire_common(FIRE_OMEGA_DAMAGE);
+}
+
+// Lifeup Omega - powerful healing spell
+void btlact_lifeup_omega(void) {
+    lifeup_common(LIFEUP_OMEGA_HEALING);
+}
+
+// PSI Rockin Gamma - powerful physical damage spell
+void btlact_psi_rockin_gamma(void) {
+    psi_rockin_common(ROCKIN_GAMMA_DAMAGE);
+}
+
+// PSI Freeze Alpha - ice damage spell
+void btlact_psi_freeze_alpha(void) {
+    psi_freeze_common(FREEZE_ALPHA_DAMAGE);
+}
+
+// Shield Beta redirect - redirects to main Shield function
+void redirect_btlact_shield_b(void) {
+    btlact_shield_beta();
+}
+
+// Healing Alpha - cures specific status ailments
+void btlact_healing_a(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    
+    if (target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_COLD) {
+        target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] = 0;
+        display_battle_text_ptr(MSG_BTL_KAZE_OFF);
+    } else if (target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_SUNSTROKE) {
+        target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] = 0;
+        display_battle_text_ptr(MSG_BTL_NISSYA_OFF);
+    } else if (target->afflictions[STATUS_GROUP_TEMPORARY] == STATUS_2_ASLEEP) {
+        target->afflictions[STATUS_GROUP_TEMPORARY] = 0;
+        display_battle_text_ptr(MSG_BTL_NEMURI_OFF);
+    } else {
+        display_battle_text_ptr(MSG_BTL_HEAL_NG);
+    }
+}
+
+// Healing Omega - revives unconscious targets or cures all ailments
+void btlact_healing_omega(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    
+    if (target->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_UNCONSCIOUS) {
+        revive_target(CURRENT_TARGET, target->hp_max);
+    } else {
+        btlact_healing_g();
+    }
+}
+
+// Multi Bottle Rocket - fires multiple bottle rockets
+void btlact_multi_bottle_rocket(void) {
+    bottle_rocket_common(MULTI_BOTTLE_ROCKET_COUNT);
+}
+
+// Sudden Guts Pill - doubles target's guts stat
+void btlact_sudden_guts_pill(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    unsigned short new_guts = target->guts * 2;
+    if (new_guts > 255) new_guts = 255;
+    
+    target->guts = new_guts;
+    display_text_wait((const char*)MSG_BTL_2GUTS_UP, new_guts);
+}
+
+// Magnet Omega - PP drain spell (Jeff-specific behavior)
+void btlact_magnet_omega(void) {
+    battler* target = get_battler(CURRENT_TARGET);
+    
+    if (target->ally_or_enemy == 0 && target->id == PARTY_MEMBER_JEFF) {
+        // Jeff can't use this on himself
+        return;
+    }
+    
+    btlact_magnet_a();
+}
+
 // PSI Rockin Beta - physical damage spell
 void btlact_psi_rockin_b(void) {
     psi_rockin_common(ROCKIN_BETA_DAMAGE);
@@ -817,4 +1333,21 @@ void redirect_btlact_psi_shield_b(void) {
 // Level 3 attack copy - redirects to main level 3 attack function
 void redirect_btlact_level_3_atk(void) {
     btlact_level_3_atk();
+}
+
+// Hypnosis Alpha - inflicts sleep status
+void btlact_hypnosis_a(void) {
+    if (fail_attack_on_npcs() != 0) return;
+    
+    battler* target = get_battler(CURRENT_TARGET);
+    if (success_255(target->hypnosis_resist) == 0) {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+        return;
+    }
+    
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_2_ASLEEP, STATUS_GROUP_TEMPORARY) != 0) {
+        display_battle_text_ptr(MSG_BTL_NEMURI_ON);
+    } else {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+    }
 }

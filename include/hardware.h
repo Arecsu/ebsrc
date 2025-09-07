@@ -51,6 +51,17 @@ extern unsigned char BG2SC_MIRROR;
 extern unsigned char BG12NBA_MIRROR;
 extern unsigned short BG2_X_POS;
 extern unsigned short BG2_Y_POS;
+extern unsigned short BG3_X_POS;
+extern unsigned short BG3_Y_POS;  
+extern unsigned short BG4_X_POS;
+extern unsigned short BG4_Y_POS;
+extern unsigned char BG1SC_MIRROR;
+extern unsigned char BG3SC_MIRROR;
+extern unsigned char BG4SC_MIRROR;
+extern unsigned char BG12NBA_MIRROR;
+extern unsigned char BG34NBA_MIRROR;
+extern unsigned short BG1_X_POS;
+extern unsigned short BG1_Y_POS;
 
 // Overworld variables
 extern unsigned char MUSHROOMIZED_WALKING_FLAG;
@@ -95,6 +106,22 @@ extern window_stats WINDOW_STATS[32];  // Array size TBD
 extern unsigned short IRQ_CALLBACK;
 extern unsigned short DEFAULT_IRQ_CALLBACK;
 extern unsigned char NMITIMEN_MIRROR;
+extern unsigned char LAST_SRAM_BANK;
+extern unsigned char SPRITE_VRAM_TABLE[88];
+
+// SRAM test addresses
+#define SRAM_SIZE_1_SCRATCH 0x700000
+#define SRAM_SIZE_2_SCRATCH 0x710000  
+#define SRAM_SIZE_3_SCRATCH 0x720000
+
+// Fade system structures
+typedef struct {
+    unsigned char step;
+    unsigned char delay;
+} fade_parameters;
+
+extern fade_parameters FADE_PARAMETERS;
+extern unsigned char FADE_DELAY_FRAMES_LEFT;
 
 // Overworld palette animation structure
 typedef struct {
@@ -112,8 +139,57 @@ extern unsigned char TEXT_PROMPT_WAITING_FOR_INPUT;
 extern unsigned char BLINKING_TRIANGLE_FLAG;
 extern unsigned short WINDOW_FOCUS;
 
+// OAM and sprite system (using existing oam_entry from line 37)
+
+extern oam_entry OAM1[128];
+extern oam_entry OAM2[128];
+extern unsigned char OAM1_HIGH_TABLE[32];
+extern unsigned char OAM2_HIGH_TABLE[32];
+extern unsigned short OAM_ADDR;
+extern unsigned short OAM_END_ADDR;
+extern unsigned short OAM_HIGH_TABLE_ADDR;
+extern unsigned char OAM_HIGH_TABLE_BUFFER;
+extern unsigned short PRIORITY_0_SPRITE_OFFSET;
+extern unsigned short PRIORITY_1_SPRITE_OFFSET;
+extern unsigned short PRIORITY_2_SPRITE_OFFSET;
+extern unsigned short PRIORITY_3_SPRITE_OFFSET;
+extern unsigned short NEXT_FRAME_BUF_ID;
+
+// Demo/joypad system
+extern unsigned short DEMO_RECORDING_FLAGS;
+extern unsigned char DEMO_FRAMES_LEFT;
+extern void* DEMO_READ_SOURCE;
+extern unsigned short PAD_RAW;
+extern unsigned short PAD_RAW_2;
+extern unsigned short JOYPAD_1_DATA;
+extern unsigned short JOYPAD_2_DATA;
+
+#define DEMO_RECORDING_FLAG_PLAYBACK 0x4000
+
+// IRQ system (IRQ_CALLBACK already declared as unsigned short on line 106)
+extern void irq(void);
+
+// Save system
+typedef struct {
+    unsigned char data[32]; // Placeholder
+} save_header;
+
+typedef struct {
+    save_header header;
+    unsigned char game_state[1248]; // Save data
+} save_block;
+
+extern void* SAVE_BASE;
+extern const char* SRAM_SIGNATURE;
+
+// Color system
+extern unsigned short COLOUR_AVERAGE_RED;
+extern unsigned short COLOUR_AVERAGE_GREEN;
+extern unsigned short COLOUR_AVERAGE_BLUE;
+
 // Forward declarations for external functions
 extern void set_inidisp(unsigned char value);
 extern int rand(void);
+extern void set_bg1_vram_location(unsigned char bg_size, unsigned short tilemap_base, unsigned short tile_base);
 
 #endif

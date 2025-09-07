@@ -14,18 +14,15 @@ void flash_inflict_crying(void);
 
 // PSI constants
 #define STATUS_6_PSI_SHIELD 0x02
-#define MSG_BTL_PSYCO_ON 0x1240     // "PSI Shield activated"
-#define MSG_BTL_PSYCO_ADD 0x1241    // "PSI Shield reinforced"
+// All battle messages now use real ROM data from rom_data.h - no more placeholders!
 
 // Status effect constants
-#define STATUS_0_PARALYZED 0x01
+// STATUS_0_PARALYZED now defined in battle.h (include battle.h)
 #define STATUS_GROUP_PERSISTENT_EASYHEAL 0x01
-#define MSG_BTL_SHIBIRE_ON 0x1242   // "Paralyzed!"
-#define MSG_BTL_KIKANAI 0x1243      // "No effect"
 
 // Forward declarations for external functions
 extern unsigned char CURRENT_TARGET;
-extern void display_battle_text_ptr(unsigned short msg_id);
+extern void display_battle_text_ptr(const unsigned char* msg_ptr);
 extern unsigned short shields_common(unsigned char target, unsigned char shield_type);
 extern unsigned short fail_attack_on_npcs(void);
 extern unsigned short flash_immunity_test(void);

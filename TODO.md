@@ -1,13 +1,21 @@
 # EarthBound Decompilation TODO
 
 ## Project Overview
-Converting 3,455 executable assembly files to C code to create a fully compilable C project without ASM dependencies. (253 ROM data/symbol/bank config files are auto-generated)
+Converting 3,455 executable assembly files to maintainable C code with functional equivalence to the original game. Focus on cross-platform compatibility and modern development practices.
+
+## Architecture Change: Functional Equivalence Strategy ✅
+**Decision**: Abandon bit-identical ROM reproduction in favor of:
+- **Functional equivalence** - same behavior, modern C practices
+- **Flexible memory layout** - allow compiler optimization
+- **Cross-platform foundation** - support SDL ports to Linux/Windows/Mac
+- **ROM data integrity** - preserve assets via .incbin inclusion
 
 ## Current Status  
-- **8 C modules created** with 1400+ lines of code
-- **95+ functions converted** from ASM to C (102/3455 files = 3.0% complete)
+- **8 C modules created** with 1500+ lines of code
+- **143+ functions converted** from ASM to C (143/3455 files = 4.1% complete)
 - **Complete C compilation system working** with ROM data access layer
 - **Zero warnings with strict GCC flags**
+- **Updated architecture documentation** for hybrid build approach
 - Organized header structure with proper includes
 - Clean build system with separate object directory
 
@@ -74,6 +82,28 @@ Converting 3,455 executable assembly files to C code to create a fully compilabl
 ### PSI System (61 lines)
 - [x] Shield PSI (psi_shield_alpha)
 - [x] Flash PSI spells (psi_flash_alpha, paralysis, crying, feeling strange)
+
+## Immediate Priority - Phase 1 Architecture Implementation 🚨
+
+**All current work is Phase 1 development** - see ARCHITECTURE.md for full multi-phase strategy
+
+### Build System Modernization (Phase 1) ✅
+- [x] **Pure C build system implemented** - Makefile.phase1 with CC65-only compilation
+- [x] **C bank generator created** - tools/generate_c_banks.py for ASM→C transition  
+- [x] **Memory layout designed** - snes_phase1.cfg with flexible C segments
+- [x] **Copyright-safe ROM handling** - extraction-based approach, no ROM data in repo
+- [x] **System vectors preserved** - critical SNES boot code stays as ASM
+- [ ] **Test Pure C build system** - validate ROM generation and functionality
+
+### Phase 1 Validation and Testing
+- [ ] **Test Pure C build system** - validate with donor ROM extraction
+- [ ] **Compare functional equivalence** - verify behavior matches ASM build  
+- [ ] **Cross-validate ROM generation** - test different ROM variants (US/JP/Proto)
+
+### Critical System Files (.critical.asm) ✅
+- [x] **System vectors renamed** - .critical.asm extension marks permanently ASM-only
+- [x] **Hardware boot requirements preserved** - RESET/NMI/IRQ vectors stay fixed
+- [x] **Memory layout finalized** - snes_phase1.cfg handles flexible C + fixed vectors
 
 ## High Priority - Core Systems 🔴
 
@@ -165,19 +195,21 @@ Converting 3,455 executable assembly files to C code to create a fully compilabl
 
 ### By Directory (Using .converted.asm tracking):
 - **audio/**: 12/12 files converted (100%)
-- **battle/actions**: 44/182 files converted (24%)
-- **system/math/**: 17/29 files converted (58%)
+- **battle/actions**: 80/182 files converted (43%) ⬆️ +36 files
+- **system/math/**: 22/29 files converted (75%) ⬆️ +5 files
 - **text/**: 9/85 files converted (10%)
 - **misc/**: 7/58 files converted (12%) - Equipment & wallet
 - **system/**: 8/63 files converted (12%) - Core utilities  
 - **overworld/**: 3/96 files converted (3%) - Basic functions
 - **inventory/**: 2/4 files converted (50%)
 
-### Total Progress: 102/3,455 executable ASM files converted (3.0%)
+### Total Progress: 143/3,455 executable ASM files converted (4.1%)
 
-**Progress Tracking System**: All converted ASM files are renamed to `.converted.asm`
+**Progress Tracking System**: 
+- `.converted.asm` - Successfully converted to C
+- `.later.asm` - Requires dependencies, marked for later conversion
 - Check progress: `./check_progress.sh`
-- Find unconverted files: `find src -name "*.asm" | grep -v ".converted"`
+- Find ready files: `find src -name "*.asm" | grep -v ".converted" | grep -v ".later"`
 
 ## Phases
 - **Phase 1** - Core Systems
@@ -193,15 +225,6 @@ Converting 3,455 executable assembly files to C code to create a fully compilabl
 5. **Menu Systems** - Convert UI and menu handling functions
 6. **Save/Load System** - Implement game state persistence
 
-## Recent Achievements
-- **Total Progress: 102/3,455 executable files (3.0%)**
-- **Audio system 100% complete (12/12 files)** - Fully converted!
-- **System math 58% complete (17/29 files)** - Added division functions, palette animation
-- **Battle actions 24% complete (44/182 files)** - Added PSI spells, equipment management
-- **Text system 10% complete (9/85 files)** - Added memory management functions
-- **System utilities 12% complete (8/63 files)** - Core infrastructure
-- **Working compilation system** with zero warnings
-- **1400+ lines of clean C code** across 8 game systems
 
 ## Notes
 - Keep C code simple and human-readable

@@ -1,5 +1,7 @@
 #include "include/hardware.h"
+#include "include/battle.h"
 #include "include/psi.h"
+#include "include/rom_data.h"
 
 // Forward declarations for external functions
 extern unsigned short shields_common(unsigned char target, unsigned char shield_type);
@@ -49,11 +51,14 @@ void flash_inflict_paralysis(void) {
 // Inflict "feeling strange" status effect  
 void flash_inflict_feeling_strange(void) {
     // Placeholder - specific status constants needed
-    display_battle_text_ptr(0x1250);  // "Feeling strange!"
+    display_battle_text_ptr(MSG_BTL_HEN_ON);
 }
 
 // Inflict "crying" status effect
 void flash_inflict_crying(void) {
-    // Placeholder - specific status constants needed  
-    display_battle_text_ptr(0x1251);  // "Started crying!"
+    if (inflict_status_battle(CURRENT_TARGET, STATUS_2_CRYING, STATUS_2_CRYING) != 0) {
+        display_battle_text_ptr(MSG_BTL_NAMIDA_ON);
+    } else {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+    }
 }
