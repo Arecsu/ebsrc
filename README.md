@@ -27,7 +27,7 @@ make -f Makefile.c
 - ROM data extraction system working
 
 **Phase 2: ASM→C Conversion** 🔄 **IN PROGRESS**  
-- Continue converting remaining ASM functions to C
+- Continue converting remaining ASM functions to C, prioritizing a minimal bootable build.
 - Resolve runtime library dependencies
 - Implement missing global variables
 
