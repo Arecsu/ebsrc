@@ -4,10 +4,7 @@ A multi-target decompilation of EarthBound (Mother 2) supporting both SNES ROM b
 
 ## Project Overview
 
-This project converts EarthBound's original assembly code to maintainable C code with multiple build targets:
-
-- **SNES ROM Build**: Creates bit-accurate `.sfc` ROM files using CC65
-- **PC Build**: Cross-platform executable using SDL2 for modern systems
+This project converts EarthBound's original assembly code to maintainable C code with cross-platform executable using SDL2 for modern systems
 
 ## Quick Start
 
@@ -25,7 +22,7 @@ make
 ./earthbound
 ```
 
-### SNES Build (Archive Branch)
+### SNES Build (Archive Branch, incomplete, abandoned)
 ```bash
 # Switch to archived SNES build
 git checkout snes-build-archive
@@ -37,25 +34,6 @@ git checkout snes-build-archive
 # Build SNES ROM
 make -f Makefile.phase1
 ```
-
-## Project Evolution
-
-### Phase 1: ASM Decompilation ✅ **COMPLETED**
-- Original ASM files extracted from EarthBound ROM
-- Located in directories with `.asm` files
-- Build system: `Makefile` → CC65 → `.sfc` ROM
-
-### Phase 2: ASM to C89 for SNES ✅ **ARCHIVED** (`snes-build-archive` branch)
-- C89 compliant code targeting SNES hardware
-- Banking pragmas and SNES-specific optimizations  
-- Build system: CC65 with C89 → `.sfc` ROM
-- **Status**: Stable build preserved in archive branch
-
-### Phase 3: Modern PC Build 🔄 **CURRENT** (`main` branch)
-- Modern C11 code with SDL2 platform layer
-- Cross-platform executable for Linux/Windows/macOS
-- Build system: CMake → SDL2 executable
-- **Status**: Active development
 
 ## Directory Structure
 
