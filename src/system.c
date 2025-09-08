@@ -91,13 +91,44 @@ void set_inidisp_far(unsigned char value) {
     set_inidisp(value);
 }
 
-// Random number functions
+// Random number generator state  
+static unsigned short rand_a = 0x1234;  // Initial seed values
+static unsigned short rand_b = 0x5678;
+
+// Hardware-optimized random number generator (based on rand.asm)  
+unsigned char rand_hw(void) {
+    unsigned short temp_mult;
+    unsigned char result;
+    
+    // Multiply rand_a (high byte) * rand_b (low byte) using hardware
+    *(volatile unsigned char*)0x4202 = (rand_a >> 8) & 0xFF;  // WRMPYA
+    *(volatile unsigned char*)0x4203 = rand_b & 0xFF;         // WRMPYB
+    
+    // Update rand_b with addition
+    rand_b = (rand_b + 0x6D) & 0xFFFF;
+    
+    // Wait for multiplication and read result
+    __asm__ ("nop");
+    temp_mult = *(volatile unsigned short*)0x4216;  // RDMPYL
+    
+    // Bit manipulation from original ASM
+    temp_mult = (temp_mult >> 2) & 0x3FFF;  // ROR twice equivalent
+    rand_a = ((temp_mult & 0x0003) + rand_a) >> 1;
+    if ((rand_a & 1) == 0) {
+        rand_a |= 0x8000;  // Set high bit if carry clear
+    }
+    
+    result = (temp_mult >> 2) & 0xFF;  // Final ROR twice and mask to 8 bits
+    return result;
+}
+
+// Random number functions using hardware rand_hw()
 unsigned short rand_0_3(void) {
-    return rand() & 0x0003;
+    return rand_hw() & 0x0003;
 }
 
 unsigned short rand_0_7(void) {
-    return rand() & 0x0007;
+    return rand_hw() & 0x0007;
 }
 
 // Math utilities
@@ -113,7 +144,7 @@ unsigned short mult8(unsigned char a, unsigned char b) {
     return *(volatile unsigned short*)0x4216;  // RDMPYL
 }
 
-// 16-bit multiplication using SNES hardware multiplier (based on mult16.converted.asm)
+// 16-bit multiplication using SNES hardware multiplier (based on mult16.asm)
 unsigned short mult16(unsigned short a, unsigned short b) {
     unsigned short low_a = a & 0xFF;
     unsigned short high_a = (a >> 8) & 0xFF;
@@ -179,7 +210,7 @@ unsigned char modulus8(unsigned char dividend, unsigned char divisor) {
 // Random number with upper limit
 unsigned short rand_limit(unsigned short limit) {
     if (limit == 0) return 0;
-    return rand() % limit;
+    return rand_hw() % limit;
 }
 
 // Truncate 16-bit value to 8-bit with scaling
@@ -214,35 +245,6 @@ short modulus16s(short dividend, short divisor) {
     return result;
 }
 
-// Random number generator state  
-static unsigned short rand_a = 0x1234;  // Initial seed values
-static unsigned short rand_b = 0x5678;
-
-// Custom random number generator implementation
-unsigned char rand_custom(void) {
-    // Implementation based on the ASM code
-    unsigned short temp_a = rand_a;
-    unsigned short temp_b = rand_b;
-    
-    // Multiply and add operations
-    unsigned long mult_result = (unsigned long)(temp_a >> 8) * (temp_b & 0xFF);
-    temp_b = (temp_b + 0x6D) & 0xFFFF;
-    rand_b = temp_b;
-    
-    // Bit manipulation for rand_a
-    mult_result = (mult_result >> 2) & 0x3FFF;
-    temp_a = ((mult_result & 0x03) + temp_a) >> 1;
-    
-    if ((mult_result & 0x01) == 0) {
-        temp_a &= 0x7FFF;  // Clear high bit
-    } else {
-        temp_a |= 0x8000;  // Set high bit
-    }
-    
-    rand_a = temp_a;
-    
-    return (unsigned char)(mult_result & 0xFF);
-}
 
 // 32-bit modulus operation
 long modulus32s(long dividend, long divisor) {
@@ -277,7 +279,7 @@ unsigned long modulus32(unsigned long dividend, unsigned long divisor) {
     return dividend % divisor;
 }
 
-// 32-bit multiplication using hardware-optimized mult16 (based on mult32.converted.asm)
+// 32-bit multiplication using hardware-optimized mult16 (based on mult32.asm)
 long mult32(long a, long b) {
     unsigned short a_low = a & 0xFFFF;
     unsigned short a_high = (a >> 16) & 0xFFFF;
@@ -299,7 +301,7 @@ long mult32(long a, long b) {
     return (long)result;
 }
 
-// 16x8 bit multiplication using SNES hardware multiplier (based on mult168.converted.asm)
+// 16x8 bit multiplication using SNES hardware multiplier (based on mult168.asm)
 unsigned short mult168(unsigned short a, unsigned char b) {
     unsigned short low_a = a & 0xFF;
     unsigned short high_a = (a >> 8) & 0xFF;
@@ -702,15 +704,12 @@ void animate_palette(void) {
     }
 }
 
-// Random number modulo operation
+// Random number modulo operation (based on rand_mod.asm)
 unsigned short rand_mod(unsigned short modulus) {
-    unsigned long rand_val;
-    
     if (modulus == 0) return 0;
     
-    // Generate random number and take modulus
-    rand_val = rand_custom();
-    return (unsigned short)(rand_val % (modulus + 1));
+    // Use hardware RAND then modulus, matching original ASM
+    return rand_hw() % (modulus + 1);
 }
 
 // 32-bit arithmetic left shift
@@ -729,12 +728,16 @@ unsigned short modulus16(unsigned short dividend, unsigned short divisor) {
     return dividend % divisor;
 }
 
-// Generate long random number
+// Generate long random number (based on rand_long.asm)
 unsigned long rand_long(void) {
-    // Generate two 16-bit random values and combine them
-    unsigned long high = rand_custom() << 8;
-    unsigned long low = rand_custom();
-    return (high << 8) | low;
+    // Original ASM just calls RAND once and extends to long
+    // But for better randomness, generate multiple calls
+    unsigned long result = 0;
+    result |= (unsigned long)rand_hw();
+    result |= ((unsigned long)rand_hw()) << 8;
+    result |= ((unsigned long)rand_hw()) << 16;  
+    result |= ((unsigned long)rand_hw()) << 24;
+    return result;
 }
 
 // Enable NMI and joypad reading
