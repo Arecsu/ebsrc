@@ -1,9 +1,9 @@
-#pragma code-name ("BANK03")
-
+// Modern C version - no more banking pragma
 #include "hardware.h"
 #include "system.h"
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 // Forward declarations for external functions  
 extern void stop_music(void);
@@ -13,15 +13,14 @@ void redirect_stop_music(void) {
     stop_music();
 }
 
-// Memory utility functions
+// Memory utility functions - now using C99 style
 void memset24(unsigned char* dest, unsigned char value, unsigned short size) {
-    unsigned short i;
-    for (i = 0; i < size; i++) {
+    for (unsigned short i = 0; i < size; i++) {
         dest[i] = value;
     }
 }
 
-// String length function
+// String length function - modern C style
 unsigned short eb_strlen(const unsigned char* str) {
     unsigned short length = 0;
     while (str[length] != 0) {
@@ -30,20 +29,18 @@ unsigned short eb_strlen(const unsigned char* str) {
     return length;
 }
 
-// 16-bit memory copy function
+// 16-bit memory copy function - modern C style
 void memcpy16(unsigned short* dest, const unsigned short* src, unsigned short word_count) {
-    unsigned short i;
-    for (i = 0; i < word_count; i++) {
+    for (unsigned short i = 0; i < word_count; i++) {
         dest[i] = src[i];
     }
 }
 
-// 16-bit memory set function 
+// 16-bit memory set function - modern C style
 void memset16(unsigned short* dest, unsigned char value, unsigned short word_count) {
-    unsigned short i;
     unsigned short word_value = (value << 8) | value;  // Duplicate byte to both halves
     
-    for (i = 0; i < word_count; i++) {
+    for (unsigned short i = 0; i < word_count; i++) {
         dest[i] = word_value;
     }
 }

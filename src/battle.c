@@ -1,11 +1,11 @@
-#pragma code-name ("BANK01")
-
+// Modern C version - no more banking pragma
 #include "hardware.h"
 #include "battle.h"
 #include "system.h"
 #include "rom_data.h"
 #include "inventory.h"
 #include <stddef.h>
+#include <stdbool.h>
 
 // Forward declarations for external functions
 extern unsigned short twenty_five_percent_variance(unsigned short value);
