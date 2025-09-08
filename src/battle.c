@@ -6,6 +6,7 @@
 #include "inventory.h"
 #include <stddef.h>
 #include <stdbool.h>
+#include <string.h>
 
 // Forward declarations for external functions
 extern unsigned short twenty_five_percent_variance(unsigned short value);
@@ -2161,5 +2162,383 @@ void btlact_xterminator_spray(void) {
 // Super Bomb - 270 damage
 void btlact_super_bomb(void) {
     bomb_common(270);
+}
+
+// EAT_FOOD function - handles food consumption and effects
+void eat_food(void) {
+    unsigned short current_target_id;
+    unsigned short character_id;
+    char_struct* character;
+    unsigned char food_effect;
+    unsigned short amount;
+    // unsigned char item_special; // TODO: Use when item system is complete
+    
+    current_target_id = CURRENT_TARGET;
+    
+    // Get battler and character info
+    battler* target_battler = &BATTLERS_TABLE[current_target_id];
+    character_id = target_battler->id;
+    
+    if (character_id == 0 || character_id > 4) {
+        return;
+    }
+    
+    character = &PARTY_CHARACTERS[character_id - 1];
+    
+    // Check if character is unconscious  
+    if ((character->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] & 0xFF) == STATUS_0_UNCONSCIOUS) {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+        return;
+    }
+    
+    // Apply condiment effect first
+    apply_condiment();
+    
+    // Get food effect type from item data
+    // TODO: Need proper item parameter access
+    food_effect = 0; // Placeholder - would get from item parameter
+    amount = 0;      // Placeholder - would get from item parameter
+    
+    switch (food_effect) {
+        case 0: // HP recovery
+            if (amount > 0) {
+                recover_hp(current_target_id, twenty_five_percent_variance(amount * 6));
+            } else {
+                recover_hp(current_target_id, 30000); // Full recovery
+            }
+            break;
+            
+        case 1: // PP recovery  
+            if (amount > 0) {
+                recover_pp(current_target_id, twenty_five_percent_variance(amount));
+            } else {
+                recover_pp(current_target_id, 30000); // Full recovery
+            }
+            break;
+            
+        case 2: // HP and PP recovery
+            if (amount > 0) {
+                recover_hp(current_target_id, twenty_five_percent_variance(amount * 6));
+                recover_pp(current_target_id, twenty_five_percent_variance(amount));
+            } else {
+                recover_hp(current_target_id, 30000);
+                recover_pp(current_target_id, 30000);
+            }
+            break;
+            
+        case 3: // Random stat boost
+            switch (rand_limit(4)) {
+                case 0: btlact_iq_up_1d4(); break;
+                case 1: btlact_guts_up_1d4(); break;
+                case 2: btlact_speed_up_1d4(); break;
+                case 3: btlact_vitality_up_1d4(); break;
+                case 4: btlact_luck_up_1d4(); break;
+            }
+            break;
+            
+        case 4: // IQ boost
+            // Boost character IQ stats
+            character->iq += amount;
+            // TODO: Also boost battler IQ if needed
+            // TODO: Recalculate character stats
+            display_text_wait((const char*)MSG_BTL_IQ_UP, amount);
+            break;
+            
+        case 5: // Guts boost  
+            target_battler->guts += amount;
+            character->guts += amount;
+            display_text_wait((const char*)MSG_BTL_GUTS_UP, amount);
+            break;
+            
+        case 6: // Speed boost
+            target_battler->speed += amount;  
+            character->speed += amount;
+            display_text_wait((const char*)MSG_BTL_SPEED_UP, amount);
+            break;
+            
+        case 7: // Vitality boost
+            // Boost character vitality
+            character->vitality += amount;
+            // TODO: Display vitality up message
+            break;
+            
+        case 8: // Luck boost
+            target_battler->luck += amount;
+            character->luck += amount;
+            // TODO: Display luck up message  
+            break;
+            
+        case 9: // Healing Alpha
+            btlact_healing_a();
+            break;
+            
+        case 10: // Heal Poison
+            heal_poison();
+            break;
+    }
+    
+    // Apply special item effects if any
+    // TODO: Get special parameter from item and apply special effects
+}
+
+// INSTANT_WIN_HANDLER function - handles instant battle victory
+void instant_win_handler(void) {
+    unsigned short money_earned = 0;
+    unsigned long exp_earned = 0;
+    unsigned short i;
+    unsigned short party_count;
+    // Variables for future implementation
+    // unsigned short enemy_index;
+    // unsigned short enemy_id;
+    // unsigned short drop_rate;
+    
+    // Clear battle initiative - TODO: Add this global variable
+    // BATTLE_INITIATIVE = 0;
+    
+    // Play victory music - TODO: Add music constants
+    // change_music(MUSIC_SUDDEN_VICTORY);
+    
+    // TODO: Screen effects - flashing colors
+    // This would be handled by SDL graphics system
+    
+    // Calculate money earned from all enemies - TODO: Add battle globals
+    // for (i = 0; i < ENEMIES_IN_BATTLE; i++) {
+    //     enemy_id = ENEMIES_IN_BATTLE_IDS[i];
+    //     // TODO: Get money value from enemy data
+    //     money_earned += 100; // Placeholder
+    // }
+    
+    // Add money to game state
+    BATTLE_MONEY_SCRATCH = money_earned;
+    // TODO: Deposit into ATM and add to total money earned
+    
+    // Clear all battler data
+    for (i = 0; i < BATTLER_COUNT; i++) {
+        memset(&BATTLERS_TABLE[i], 0, sizeof(battler));
+    }
+    
+    // Reinitialize party member battlers - TODO: Add party_members to game_state
+    // for (i = 0; i < 4; i++) {
+    //     unsigned char party_member = GAME_STATE.party_members[i];
+    //     if (party_member >= PARTY_MEMBER_NESS && party_member <= PARTY_MEMBER_POO) {
+    //         // TODO: Initialize battler stats from party data
+    //     }
+    // }
+    
+    // Calculate experience earned - TODO: Add battle globals
+    // for (i = 0; i < ENEMIES_IN_BATTLE; i++) {
+    //     enemy_id = ENEMIES_IN_BATTLE_IDS[i];
+    //     // TODO: Get exp value from enemy data  
+    //     exp_earned += 50; // Placeholder
+    // }
+    exp_earned = 50; // Placeholder
+    
+    // Divide experience among party members
+    party_count = count_chars(0); // Count alive party members
+    if (party_count > 0) {
+        exp_earned = (exp_earned + party_count - 1) / party_count; // Round up division
+        BATTLE_EXP_SCRATCH = exp_earned;
+    }
+    
+    // Display victory message
+    display_text_wait((const char*)MSG_BTL_PLAYER_WIN_FORCE, exp_earned);
+    
+    // Give experience to all conscious party members
+    for (i = 0; i < BATTLER_COUNT; i++) {
+        battler* current_battler = &BATTLERS_TABLE[i];
+        
+        if (current_battler->consciousness != 0 &&
+            current_battler->ally_or_enemy == 0 &&  // Ally
+            current_battler->npc_id == 0 &&         // Not NPC
+            current_battler->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] != STATUS_0_UNCONSCIOUS &&
+            current_battler->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] != STATUS_0_DIAMONDIZED) {
+            
+            // TODO: Give experience to character
+            // gain_exp(current_battler->id, exp_earned, 1);
+        }
+    }
+    
+    // Handle item drops - TODO: Add battle globals
+    // if (ENEMIES_IN_BATTLE > 0) {
+    //     enemy_index = rand_limit(ENEMIES_IN_BATTLE);
+    //     enemy_id = ENEMIES_IN_BATTLE_IDS[enemy_index];
+        
+        // TODO: Get item and drop rate from enemy data
+        // For now just clear the item dropped
+        ITEM_DROPPED = 0;
+        
+    //     // Check drop rate and set item if successful
+    //     drop_rate = 0; // Would get from enemy data
+    //     switch (drop_rate) {
+    //         case 0: if ((rand() & 0x07) == 0) ITEM_DROPPED = 0; break;
+    //         case 1: if ((rand() & 0x0F) == 0) ITEM_DROPPED = 0; break;
+    //         case 2: if ((rand() & 0x1F) == 0) ITEM_DROPPED = 0; break;
+    //         case 3: if ((rand() & 0x3F) == 0) ITEM_DROPPED = 0; break;
+    //         case 4: if ((rand() & 0x7F) == 0) ITEM_DROPPED = 0; break;
+    //         case 5: if ((rand() & 0xFF) == 0) ITEM_DROPPED = 0; break;
+    //         case 6: /* Always drop */ break;
+    //     }
+        
+    //     if (ITEM_DROPPED != 0) {
+    //         // TODO: Add item to inventory and display message
+    //         display_battle_text_ptr(MSG_BTL_PRESENT);
+    //     }
+    // }
+    
+    // Restore appropriate background music - TODO: Add constants
+    // if (GAME_STATE.walking_style == WALKING_STYLE_BICYCLE) {
+    //     change_music(MUSIC_BICYCLE);
+    // } else {
+    //     // TODO: Restore previous area music
+    // }
+}
+
+// AUTOLIFEUP function - finds character most in need of auto-recovery
+unsigned short autolifeup(void) {
+    unsigned short lowest_hp = 9999;
+    unsigned short selected_character = 0;
+    unsigned short i;
+    unsigned short character_id;
+    char_struct* character;
+    unsigned short current_hp;
+    unsigned short quarter_max_hp;
+    
+    // Check all party slots - TODO: Add party_members field
+    for (i = 0; i < 4; i++) {
+        character_id = i + 1; // Placeholder: assume party is Ness, Paula, Jeff, Poo
+        
+        if (character_id >= PARTY_MEMBER_NESS && character_id <= PARTY_MEMBER_POO) {
+            character = &PARTY_CHARACTERS[character_id - 1];
+            
+            // Skip if character has autolifeup flag already set
+            // Skip if character has autolifeup flag already set - TODO: Find correct field
+            if (character->unknown68 != 0) {
+                continue;
+            }
+            
+            // Skip if unconscious
+            if ((character->afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] & 0xFF) == STATUS_0_UNCONSCIOUS) {
+                continue;
+            }
+            
+            current_hp = character->current_hp;
+            quarter_max_hp = character->max_hp >> 2; // Divide by 4
+            
+            // Only consider if HP is below 25% and lower than current lowest
+            if (current_hp < quarter_max_hp && current_hp < lowest_hp) {
+                lowest_hp = current_hp;
+                selected_character = character_id;
+            }
+        }
+    }
+    
+    // Mark selected character for autolifeup
+    if (selected_character != 0) {
+        character = &PARTY_CHARACTERS[selected_character - 1];
+        character->unknown68 = 1; // TODO: Find correct field for autolifeup flag
+    }
+    
+    return selected_character;
+}
+
+// HEAL_STRANGENESS function - removes strange status effect
+void heal_strangeness(void) {
+    battler* target_battler = &BATTLERS_TABLE[CURRENT_TARGET];
+    
+    // Check if target has strange status (value 1 in strangeness group)
+    if (target_battler->afflictions[STATUS_GROUP_STRANGENESS] == 1) {
+        // Clear the strange status
+        target_battler->afflictions[STATUS_GROUP_STRANGENESS] = 0;
+        
+        // Display "feeling normal again" message
+        display_battle_text_ptr(MSG_BTL_HEN_OFF);
+    }
+}
+
+// BATTLE_INIT_ENEMY_STATS function - initializes enemy battler from enemy data
+void battle_init_enemy_stats(unsigned short enemy_id, battler* target) {
+    // TODO: This function requires extensive enemy data structures
+    // For now, implement a basic version
+    
+    // Clear the battler structure
+    memset(target, 0, sizeof(battler));
+    
+    // Set basic enemy properties
+    target->id = enemy_id;
+    target->consciousness = 1;  // Conscious
+    target->ally_or_enemy = 1;  // Enemy
+    target->npc_id = 0;         // Not an NPC
+    
+    // TODO: Load actual enemy stats from ENEMY_CONFIGURATION_TABLE
+    // This would involve:
+    // - Loading HP, PP, offense, defense, speed, guts, luck, IQ
+    // - Setting resistances (fire, freeze, flash, paralysis, hypnosis, brainshock)
+    // - Setting battle sprite and row
+    // - Setting money and experience values
+    // - Applying initial status effects
+    
+    // Placeholder stats for now
+    target->hp_max = 100;
+    target->hp_target = 100;
+    target->hp = 100;
+    target->pp_max = 50;
+    target->pp_target = 50;
+    target->pp_current = 50;
+    
+    target->offense = 50;
+    target->defense = 50;
+    target->speed = 50;
+    target->guts = 50;
+    target->luck = 50;
+    
+    target->base_offense = 50;
+    target->base_defense = 50;
+    target->base_speed = 50;
+    target->base_guts = 50;
+    target->base_luck = 50;
+    
+    // Resistances (0 = no resistance, 255 = immune)
+    target->fire_resist = 0;
+    target->freeze_resist = 0;
+    target->flash_resist = 0;
+    target->paralysis_resist = 0;
+    target->hypnosis_resist = 0;
+    target->brainshock_resist = 0;
+}
+
+// FIND_TARGETTABLE_NPC function - finds a targettable NPC in the party
+unsigned short find_targettable_npc(void) {
+    unsigned short party_slot;
+    // unsigned short party_member_id;  // TODO: Use when party system is complete
+    // unsigned short battler_index;     // TODO: Use when party system is complete
+    
+    // 75% chance to return 0 (no NPC target)
+    if ((rand() & 0x0003) == 0) {
+        return 0;
+    }
+    
+    // Check each party slot for targettable NPCs
+    for (party_slot = 0; party_slot < 4; party_slot++) {
+        // TODO: Access party_members array when added to game_state
+        // For now, skip NPC targeting
+        // party_member_id = GAME_STATE.party_members[party_slot];
+        
+        // if (party_member_id >= PARTY_MEMBER_POKEY) {
+        //     // Check if this NPC type is targettable using NPC_AI_TABLE
+        //     // TODO: Implement NPC AI table lookup
+        //     
+        //     // Look for this NPC in the battlers table
+        //     for (battler_index = 0; battler_index < BATTLER_COUNT; battler_index++) {
+        //         battler* current_battler = &BATTLERS_TABLE[battler_index];
+        //         
+        //         if (current_battler->consciousness != 0 &&
+        //             current_battler->npc_id == party_member_id) {
+        //             return battler_index + 1; // Return 1-based index
+        //         }
+        //     }
+        // }
+    }
+    
+    return 0; // No targettable NPC found
 }
 

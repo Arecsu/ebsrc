@@ -1,0 +1,789 @@
+// Modern SDL2-compatible system functions
+#include "platform/graphics.h"
+#include "platform/audio.h"
+#include "hardware.h"
+#include "system.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
+
+// Forward declarations for external functions  
+extern void stop_music(void);
+
+// Simple redirect function for stop music
+void redirect_stop_music(void) {
+    stop_music();
+}
+
+// Modern memory utility functions 
+void memset24(unsigned char* dest, unsigned char value, unsigned short size) {
+    for (unsigned short i = 0; i < size; i++) {
+        dest[i] = value;
+    }
+}
+
+unsigned short eb_strlen(const unsigned char* str) {
+    unsigned short length = 0;
+    while (str[length] != 0) {
+        length++;
+    }
+    return length;
+}
+
+void memcpy16(unsigned short* dest, const unsigned short* src, unsigned short word_count) {
+    for (unsigned short i = 0; i < word_count; i++) {
+        dest[i] = src[i];
+    }
+}
+
+void memset16(unsigned short* dest, unsigned char value, unsigned short word_count) {
+    unsigned short word_value = (value << 8) | value;
+    
+    for (unsigned short i = 0; i < word_count; i++) {
+        dest[i] = word_value;
+    }
+}
+
+// SDL2-compatible graphics operations (replacing SNES PPU)
+void wait_dma_finished(void) {
+    // SDL2 handles graphics operations synchronously - no waiting needed
+}
+
+void set_bg2_vram_location(unsigned char tilemap_config, unsigned short tilemap_addr, unsigned short tile_addr) {
+    // SDL2 equivalent - configure background layer
+    render_background_tile(2, tilemap_addr, tile_addr, tilemap_config);
+    
+    // Update tracking variables for compatibility
+    BG2SC_MIRROR = (tilemap_config & 0x03) | ((tilemap_addr >> 8) & 0xFC);
+    BG12NBA_MIRROR = (BG12NBA_MIRROR & 0x0F) | ((tile_addr >> 8) & 0xF0);
+    BG2_X_POS = 0;
+    BG2_Y_POS = 0;
+}
+
+// Modern callback system (replacing hardware interrupts)
+void reset_irq_callback(void) {
+    IRQ_CALLBACK = DEFAULT_IRQ_CALLBACK;
+}
+
+void set_irq_callback(unsigned short callback_addr) {
+    IRQ_CALLBACK = callback_addr;
+}
+
+// SDL2-compatible graphics effects (replacing SNES color math)
+void set_colour_addsub_mode(unsigned char cgwsel, unsigned char cgadsub) {
+    // SDL2 equivalent - apply color effects
+    apply_color_effects();
+    
+    // Store for compatibility
+    (void)cgwsel;
+    (void)cgadsub;
+}
+
+void set_inidisp_far(unsigned char value) {
+    // SDL2 equivalent - set screen brightness
+    float brightness = (value & 0x0F) / 15.0f;
+    set_screen_brightness(brightness);
+}
+
+// Modern random number generator (replacing SNES hardware RNG)
+static unsigned short rand_a = 0x1234;
+static unsigned short rand_b = 0x5678;
+
+unsigned char rand_hw(void) {
+    // Modern C replacement for SNES hardware RNG
+    unsigned short temp_mult = ((rand_a >> 8) & 0xFF) * (rand_b & 0xFF);
+    
+    rand_b = (rand_b + 0x6D) & 0xFFFF;
+    
+    // Equivalent bit manipulation to original
+    temp_mult = (temp_mult >> 2) & 0x3FFF;
+    rand_a = ((temp_mult & 0x0003) + rand_a) >> 1;
+    if ((rand_a & 1) == 0) {
+        rand_a |= 0x8000;
+    }
+    
+    unsigned char result = (temp_mult >> 2) & 0xFF;
+    return result;
+}
+
+// Random number utility functions
+unsigned short rand_0_3(void) {
+    return rand_hw() & 0x0003;
+}
+
+unsigned short rand_0_7(void) {
+    return rand_hw() & 0x0007;
+}
+
+// Modern math utilities (replacing SNES hardware multiplier)
+unsigned short mult8(unsigned char a, unsigned char b) {
+    return (unsigned short)a * (unsigned short)b;
+}
+
+unsigned short mult16(unsigned short a, unsigned short b) {
+    return a * b;  // Let the compiler optimize
+}
+
+// Modern 16-bit unsigned division (replacing SNES hardware)
+unsigned short division16(unsigned short dividend, unsigned short divisor) {
+    if (divisor == 0) return 0;
+    return dividend / divisor;
+    
+    // Use SNES hardware divider  
+    *(volatile unsigned short*)0x4204 = dividend;  // WRDIVL (16-bit)
+    *(volatile unsigned short*)0x4206 = 0;         // WRDIVH (clear high bits)
+    *(volatile unsigned char*)0x4206 = divisor;    // WRDIVB (8-bit divisor)
+    
+    // Wait for division to complete (16 CPU cycles)
+    __asm__ ("nop");
+    __asm__ ("nop"); 
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    
+    return *(volatile unsigned short*)0x4214;      // RDDIVL (result)
+}
+
+// 16-bit signed division
+unsigned short division16s(signed short dividend, signed short divisor) {
+    if (divisor == 0) return 0;
+    return (unsigned short)(dividend / divisor);
+}
+
+// 8-bit modulus
+unsigned char modulus8(unsigned char dividend, unsigned char divisor) {
+    if (divisor == 0) return 0;
+    return dividend % divisor;
+}
+
+// Random number with upper limit
+unsigned short rand_limit(unsigned short limit) {
+    if (limit == 0) return 0;
+    return rand_hw() % limit;
+}
+
+// Truncate 16-bit value to 8-bit with scaling
+unsigned short truncate_16_to_8(unsigned short value, unsigned short multiplier) {
+    unsigned long result = (unsigned long)value * multiplier;
+    return (unsigned short)(result >> 8);  // Shift right 8 bits
+}
+
+// Arithmetic shift right for 16-bit signed values
+short asr16(short value) {
+    if (value >= 0) {
+        return value;  // Positive values unchanged
+    } else {
+        // For negative values, this is the same as regular right shift in C
+        return value >> 1;  // C handles sign extension automatically
+    }
+}
+
+// 16-bit signed modulus operation
+short modulus16s(short dividend, short divisor) {
+    short result;
+    
+    if (divisor == 0) return 0;
+    
+    result = dividend % divisor;
+    
+    // Handle sign correction for negative dividend
+    if (dividend < 0 && result != 0) {
+        result = -result;
+    }
+    
+    return result;
+}
+
+
+// 32-bit modulus operation
+long modulus32s(long dividend, long divisor) {
+    int dividend_negative;
+    long abs_dividend;
+    long abs_divisor;
+    long remainder;
+    
+    if (divisor == 0) return 0;
+    
+    // Store sign of dividend for result
+    dividend_negative = (dividend < 0);
+    
+    // Get absolute values
+    abs_dividend = (dividend < 0) ? -dividend : dividend;
+    abs_divisor = (divisor < 0) ? -divisor : divisor;
+    
+    // Perform division and get remainder
+    remainder = abs_dividend % abs_divisor;
+    
+    // Apply sign correction - remainder has same sign as dividend
+    if (dividend_negative && remainder != 0) {
+        remainder = -remainder;
+    }
+    
+    return remainder;
+}
+
+// 32-bit unsigned modulus
+unsigned long modulus32(unsigned long dividend, unsigned long divisor) {
+    if (divisor == 0) return 0;
+    return dividend % divisor;
+}
+
+// 32-bit multiplication using hardware-optimized mult16 (based on mult32.asm)
+long mult32(long a, long b) {
+    unsigned short a_low = a & 0xFFFF;
+    unsigned short a_high = (a >> 16) & 0xFFFF;
+    unsigned short b_low = b & 0xFFFF;
+    unsigned short b_high = (b >> 16) & 0xFFFF;
+    unsigned long result = 0;
+    
+    // Low * Low (contributes to low 32 bits)
+    result += (unsigned long)mult16(a_low, b_low);
+    
+    // Low * High (contributes to middle 32 bits, shift left 16)
+    result += ((unsigned long)mult16(a_low, b_high)) << 16;
+    
+    // High * Low (contributes to middle 32 bits, shift left 16)  
+    result += ((unsigned long)mult16(a_high, b_low)) << 16;
+    
+    // High * High would be shifted 32 bits, so ignored for 32-bit result
+    
+    return (long)result;
+}
+
+// 16x8 bit multiplication using SNES hardware multiplier (based on mult168.asm)
+unsigned short mult168(unsigned short a, unsigned char b) {
+    unsigned short low_a = a & 0xFF;
+    unsigned short high_a = (a >> 8) & 0xFF;
+    unsigned short result;
+    
+    if (high_a == 0) {
+        // Simple case: only low byte multiplication needed
+        *(volatile unsigned char*)0x4202 = low_a;   // WRMPYA
+        *(volatile unsigned char*)0x4203 = b;       // WRMPYB
+        __asm__ ("nop");
+        __asm__ ("nop");
+        return *(volatile unsigned short*)0x4216;   // RDMPYL
+    } else {
+        // Complex case: both high and low bytes present
+        *(volatile unsigned char*)0x4202 = low_a;   // WRMPYA
+        *(volatile unsigned char*)0x4203 = b;       // WRMPYB
+        __asm__ ("nop");
+        __asm__ ("nop");
+        result = *(volatile unsigned short*)0x4216; // RDMPYL
+        
+        // Add high byte contribution
+        *(volatile unsigned char*)0x4202 = high_a;  // WRMPYA
+        *(volatile unsigned char*)0x4203 = b;       // WRMPYB
+        __asm__ ("nop");
+        __asm__ ("nop");
+        result += (*(volatile unsigned short*)0x4216) << 8; // RDMPYL
+        
+        return result;
+    }
+}
+
+// Forward declaration
+short cosine_sine(short value, unsigned char angle);
+
+// Cosine function using lookup table
+short cosine(short value, unsigned char angle) {
+    // Cosine is sine shifted by 90 degrees (0x40)
+    unsigned char cos_angle = (angle - 0x40) & 0xFF;
+    return cosine_sine(value, cos_angle);
+}
+
+// Cosine/Sine calculation using hardware multiplier and lookup table
+short cosine_sine(short value, unsigned char angle) {
+    // Use SNES hardware multiplier (Mode 7 matrix)
+    // This is a placeholder implementation - actual would use SINE_LOOKUP_TABLE
+    // and hardware registers M7A, M7B, MPYM
+    
+    // For now, use basic trigonometry approximation
+    // In actual implementation, would access SINE_LOOKUP_TABLE[angle]
+    // and use hardware multiplication via M7A/M7B registers
+    
+    // Simplified implementation for compilation
+    (void)angle; // Suppress unused parameter warning
+    return value; // Placeholder return
+}
+
+// Clear OAM (Object Attribute Memory) for sprites
+void oam_clear(void) {
+    int i;
+    
+    // Reset priority sprite offsets
+    PRIORITY_0_SPRITE_OFFSET = 0;
+    PRIORITY_1_SPRITE_OFFSET = 0; 
+    PRIORITY_2_SPRITE_OFFSET = 0;
+    PRIORITY_3_SPRITE_OFFSET = 0;
+    
+    // Set up OAM addresses based on frame buffer
+    if (NEXT_FRAME_BUF_ID == 1) {
+        OAM_ADDR = (unsigned short)((uintptr_t)&OAM1[0]);
+        OAM_END_ADDR = (unsigned short)((uintptr_t)&OAM1[128]);
+        OAM_HIGH_TABLE_ADDR = (unsigned short)((uintptr_t)&OAM1_HIGH_TABLE[0]);
+        
+        // Clear all sprite Y coordinates to 0xE0 (off-screen)
+        for (i = 0; i < 128; i++) {
+            OAM1[i].y_coord = 0xE0;
+        }
+    } else {
+        OAM_ADDR = (unsigned short)((uintptr_t)&OAM2[0]);
+        OAM_END_ADDR = (unsigned short)((uintptr_t)&OAM2[128]);
+        OAM_HIGH_TABLE_ADDR = (unsigned short)((uintptr_t)&OAM2_HIGH_TABLE[0]);
+        
+        // Clear all sprite Y coordinates to 0xE0 (off-screen)
+        for (i = 0; i < 128; i++) {
+            OAM2[i].y_coord = 0xE0;
+        }
+    }
+    
+    OAM_HIGH_TABLE_BUFFER = 0x80;
+}
+
+// Read joypad input (with demo playback support)
+void read_joypad(void) {
+    // TODO: Requires DEMO_* constants - simplified for now
+    // unsigned char frame_count;
+    // unsigned short demo_input;
+    
+    // Check if demo playback is active
+    // if ((DEMO_RECORDING_FLAGS & DEMO_RECORDING_FLAG_PLAYBACK) != 0) {
+    //     DEMO_FRAMES_LEFT--;
+    //     
+    //     if (DEMO_FRAMES_LEFT == 0) {
+    //         // Advance to next demo input frame
+    //         DEMO_READ_SOURCE += 3;
+    //         
+    //         frame_count = *(unsigned char*)DEMO_READ_SOURCE;
+    //         if (frame_count == 0) {
+    //             // End of demo, stop playback
+    //             DEMO_RECORDING_FLAGS &= ~DEMO_RECORDING_FLAG_PLAYBACK;
+    //         } else {
+    //             DEMO_FRAMES_LEFT = frame_count;
+    //             // Read joypad data from demo
+    //             demo_input = *(unsigned short*)(DEMO_READ_SOURCE + 1);
+    //             PAD_RAW = demo_input;
+    //             PAD_RAW_2 = demo_input;
+    //         }
+    //     }
+    // } else {
+    //     // Read actual joypad hardware
+        PAD_RAW_2 = JOYPAD_2_DATA;
+        PAD_RAW = JOYPAD_1_DATA;
+    // }
+}
+
+// 24-bit memory copy function
+void memcpy24(void* dest, const void* src, unsigned char count) {
+    unsigned char* d = (unsigned char*)dest;
+    const unsigned char* s = (const unsigned char*)src;
+    unsigned char i;
+    
+    for (i = 0; i <= count; i++) {
+        d[i] = s[i];
+    }
+}
+
+// Custom strlen function
+unsigned char strlen_custom(const char* str) {
+    unsigned char len = 0;
+    
+    while (str[len] != '\0') {
+        len++;
+    }
+    return len;
+}
+
+
+// Interrupt handlers
+void reset_handler(void) {
+    // TODO: Implement proper reset handler
+    // For now, just loop
+    while (1) {}
+}
+
+void nmi_handler(void) {
+    // TODO: Implement proper NMI handler  
+    // For now, just return
+}
+
+void irq_handler(void) {
+    // TODO: Implement proper IRQ handler
+    // Call existing irq function if available
+    irq();
+}
+
+// IRQ vector jump
+void irq_vector(void) {
+    // Jump to IRQ handler
+    irq();
+}
+
+// Execute IRQ callback
+void execute_irq_callback(void) {
+    // Call function pointer stored in IRQ_CALLBACK
+    if (IRQ_CALLBACK != 0) {
+        ((void(*)(void))(uintptr_t)IRQ_CALLBACK)();
+    }
+}
+
+// Calculate save block XOR checksum
+unsigned short calc_save_block_xor_checksum(unsigned short slot) {
+    // TODO: Requires SAVE_BASE constant - disabled for now
+    // Calculate base address of save block game_state section (using fixed sizes)
+    // void* save_addr = (void*)(SAVE_BASE + (slot * 0x500) + 0x20);  // 0x500 = save_block size, 0x20 = save_header size
+    
+    unsigned short checksum = 0;
+    // unsigned short* data = (unsigned short*)save_addr;
+    unsigned short i;
+    
+    // XOR all words in the save data (excluding header) - 0x4E0 = (0x500 - 0x20) / 2
+    for (i = 0; i < 0x240; i++) {  // 0x240 = (0x500 - 0x20) / 2
+        // checksum ^= data[i];
+    }
+    
+    return checksum;
+}
+
+// Erase save block - clear save data and write signature
+void erase_save_block(unsigned short slot) {
+    // TODO: Requires SAVE_BASE and SRAM_SIGNATURE constants - disabled for now
+    // Calculate save block address
+    // void* save_addr = (void*)(SAVE_BASE + (slot * 0x500));
+    
+    // Clear entire save block
+    // memset24(save_addr, 0, 0x500);
+    
+    // Copy SRAM signature to beginning of save block
+    // const char* signature = SRAM_SIGNATURE;
+    // unsigned char sig_len = strlen_custom((const char*)signature);
+    // memcpy24(save_addr, signature, sig_len);
+    (void)slot; // Suppress unused parameter warning
+}
+
+// Forward declaration
+void copy_save_block(unsigned short to_block, unsigned short from_block);
+
+// Copy individual save block
+void copy_save_block(unsigned short to_block, unsigned short from_block) {
+    // TODO: Requires SAVE_BASE constant - disabled for now
+    // void* dest = (void*)(SAVE_BASE + (to_block * 0x500));
+    // void* src = (void*)(SAVE_BASE + (from_block * 0x500));
+    
+    unsigned short i;
+    
+    // Copy entire save block (0x500 bytes)
+    for (i = 0; i < 0x500; i++) {
+        // ((unsigned char*)dest)[i] = ((unsigned char*)src)[i];
+    }
+    (void)to_block; // Suppress unused parameter warnings
+    (void)from_block;
+}
+
+// Copy save slot data 
+void copy_save(unsigned short to, unsigned short from) {
+    // Save slots are stored in pairs, so multiply by 2 to get block indexes
+    unsigned short to_block = to * 2;
+    unsigned short from_block = from * 2;
+    
+    // Copy both save blocks for the slot (main and backup)
+    copy_save_block(to_block, from_block);
+    copy_save_block(to_block + 1, from_block + 1);
+}
+
+// Get average color from palette (96 colors)
+void get_colour_average(unsigned short* palette) {
+    unsigned short red_total = 0;
+    unsigned short green_total = 0;  
+    unsigned short blue_total = 0;
+    unsigned short color_count = 0;
+    int i;
+    unsigned short color;
+    
+    // Sum RGB components from 96 palette entries
+    for (i = 0; i < 96; i++) {
+        color = palette[i];
+        
+        // Skip transparent colors (bit 15 clear)
+        if ((color & 0x7FFF) == 0) continue;
+        
+        // Extract RGB components (BGR555 format)
+        red_total += color & 0x1F;                    // Red: bits 0-4
+        green_total += (color >> 5) & 0x1F;           // Green: bits 5-9
+        blue_total += (color >> 10) & 0x1F;           // Blue: bits 10-14
+        
+        color_count++;
+    }
+    
+    // Calculate averages (with scaling factor of 8)
+    if (color_count > 0) {
+        COLOUR_AVERAGE_RED = (red_total * 8) / color_count;
+        COLOUR_AVERAGE_GREEN = (green_total * 8) / color_count;  
+        COLOUR_AVERAGE_BLUE = (blue_total * 8) / color_count;
+    } else {
+        COLOUR_AVERAGE_RED = 0;
+        COLOUR_AVERAGE_GREEN = 0;
+        COLOUR_AVERAGE_BLUE = 0;
+    }
+}
+
+// 8-bit signed modulus operation
+char modulus8s(char dividend, char divisor) {
+    char result;
+    
+    if (divisor == 0) return 0;
+    
+    result = dividend % divisor;
+    
+    // Handle sign correction for negative dividend
+    if (dividend < 0 && result != 0) {
+        result = -result;
+    }
+    
+    return result;
+}
+
+// Arithmetic shift right for 8-bit values with shift count
+unsigned char asr8(unsigned char value, unsigned char shift_count) {
+    unsigned char result;
+    unsigned char i;
+    
+    if (value < 0x80) {
+        // Positive value - logical shift right
+        return value >> shift_count;
+    } else {
+        // Negative value - arithmetic shift right (sign extension)
+        result = value;
+        for (i = 0; i < shift_count; i++) {
+            result = (result >> 1) | 0x80;  // Shift right and preserve sign bit
+        }
+        return result;
+    }
+}
+
+// Arithmetic shift left for 16-bit values with shift count  
+unsigned short asl16(unsigned short value, unsigned char shift_count) {
+    return value << shift_count;
+}
+
+// 8-bit signed division using SNES hardware
+unsigned char division8s(char dividend, char divisor) {
+    unsigned char abs_dividend;
+    unsigned char abs_divisor;
+    unsigned char quotient;
+    
+    if (divisor == 0) return 0;
+    
+    // Convert signed values to unsigned for hardware
+    abs_dividend = (dividend < 0) ? -dividend : dividend;
+    abs_divisor = (divisor < 0) ? -divisor : divisor;
+    
+    // Use SNES hardware divider
+    *(volatile unsigned short*)0x4204 = abs_dividend;  // WRDIVL (low byte only)
+    *(volatile unsigned short*)0x4206 = 0;             // WRDIVH (clear high byte)
+    *(volatile unsigned char*)0x4206 = abs_divisor;    // WRDIVB
+    
+    // Wait for division to complete (16 cycles)
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    
+    // Read quotient and remainder  
+    quotient = *(volatile unsigned char*)0x4214;  // RDDIVL
+    (void)*(volatile unsigned char*)0x4216; // RDMPYL - read to clear register
+    
+    return quotient;
+}
+
+// 8-bit unsigned division wrapper - handles sign logic
+unsigned char division8(char dividend, char divisor) {
+    char sign_flag;
+    unsigned char result;
+    
+    if (divisor == 0) return 0;
+    
+    // Determine if result should be negative (different signs)
+    sign_flag = dividend ^ divisor;
+    
+    // Call signed division function
+    result = division8s(dividend, divisor);
+    
+    // Apply sign correction if needed
+    if (sign_flag < 0 && result != 0) {
+        result = (unsigned char)(-(char)result);
+    }
+    
+    return result;
+}
+
+// Animate palette - handles overworld palette animation timing
+void animate_palette(void) {
+    unsigned char current_index;
+    unsigned char delay;
+    
+    // Decrement animation timer
+    OVERWORLD_PALETTE_ANIM.timer--;
+    
+    if (OVERWORLD_PALETTE_ANIM.timer == 0) {
+        // Timer expired, advance to next frame
+        current_index = OVERWORLD_PALETTE_ANIM.index;
+        
+        // Get delay for current frame (doubled because delays are stored as words)
+        delay = OVERWORLD_PALETTE_ANIM.delays[current_index * 2];
+        
+        if (delay == 0) {
+            // End of animation sequence, reset to beginning
+            OVERWORLD_PALETTE_ANIM.index = 0;
+            current_index = 0;
+            delay = OVERWORLD_PALETTE_ANIM.delays[0];
+        }
+        
+        // Set timer for next frame
+        OVERWORLD_PALETTE_ANIM.timer = delay;
+        
+        // Process the current palette frame (calls external function)
+        unknown_c0a1f2(current_index);
+        
+        // Advance to next frame
+        OVERWORLD_PALETTE_ANIM.index++;
+    }
+}
+
+// Random number modulo operation (based on rand_mod.asm)
+unsigned short rand_mod(unsigned short modulus) {
+    if (modulus == 0) return 0;
+    
+    // Use hardware RAND then modulus, matching original ASM
+    return rand_hw() % (modulus + 1);
+}
+
+// 32-bit arithmetic left shift
+unsigned long asl32(unsigned long value, unsigned char shift_count) {
+    return value << shift_count;
+}
+
+// 32-bit arithmetic right shift (signed)
+long asr32(long value, unsigned char shift_count) {
+    return value >> shift_count;  // C handles sign extension automatically
+}
+
+// 16-bit modulus operation  
+unsigned short modulus16(unsigned short dividend, unsigned short divisor) {
+    if (divisor == 0) return 0;
+    return dividend % divisor;
+}
+
+// Generate long random number (based on rand_long.asm)
+unsigned long rand_long(void) {
+    // Original ASM just calls RAND once and extends to long
+    // But for better randomness, generate multiple calls
+    unsigned long result = 0;
+    result |= (unsigned long)rand_hw();
+    result |= ((unsigned long)rand_hw()) << 8;
+    result |= ((unsigned long)rand_hw()) << 16;  
+    result |= ((unsigned long)rand_hw()) << 24;
+    return result;
+}
+
+// Enable NMI and joypad reading
+void enable_nmi_joypad(void) {
+    NMITIMEN_MIRROR |= 0x81;  // Enable NMI and joypad auto-read
+    *(volatile unsigned char*)0x4200 = NMITIMEN_MIRROR;  // NMITIMEN
+}
+
+// Default IRQ callback - does nothing
+void default_irq_callback(void) {
+    // Empty function
+}
+
+// Set BG1 VRAM location
+void set_bg1_vram_location(unsigned char bg_size, unsigned short tilemap_base, unsigned short tile_base) {
+    BG1SC_MIRROR = (bg_size & 0x03) | ((tilemap_base & 0x3F) << 2);
+    *(volatile unsigned char*)0x2107 = BG1SC_MIRROR;
+    
+    BG12NBA_MIRROR = (BG12NBA_MIRROR & 0xF0) | ((tile_base >> 4) & 0x0F);
+    *(volatile unsigned char*)0x210B = BG12NBA_MIRROR;
+    
+    BG1_X_POS = 0;
+    BG1_Y_POS = 0;
+}
+
+// Set BG3 VRAM location
+void set_bg3_vram_location(unsigned char tilemap_config, unsigned short tilemap_addr, unsigned short tile_addr) {
+    BG3SC_MIRROR = (tilemap_config & 0x03) | ((tilemap_addr >> 8) & 0xFC);
+    *(volatile unsigned char*)0x210A = BG3SC_MIRROR;  // BG3SC
+    
+    BG34NBA_MIRROR = (BG34NBA_MIRROR & 0xF0) | ((tile_addr >> 12) & 0x0F);
+    *(volatile unsigned char*)0x210D = BG34NBA_MIRROR;  // BG34NBA
+    
+    BG3_X_POS = 0;
+    BG3_Y_POS = 0;
+}
+
+// Set BG4 VRAM location  
+void set_bg4_vram_location(unsigned char tilemap_config, unsigned short tilemap_addr, unsigned short tile_addr) {
+    BG4SC_MIRROR = (tilemap_config & 0x03) | ((tilemap_addr >> 8) & 0xFC);
+    *(volatile unsigned char*)0x210B = BG4SC_MIRROR;  // BG4SC
+    
+    BG34NBA_MIRROR = (BG34NBA_MIRROR & 0x0F) | ((tile_addr >> 8) & 0xF0);
+    *(volatile unsigned char*)0x210D = BG34NBA_MIRROR;  // BG34NBA
+    
+    BG4_X_POS = 0;
+    BG4_Y_POS = 0;
+}
+
+// Allocate sprite memory slots
+void alloc_sprite_mem(unsigned char slot_id, unsigned char sprite_size) {
+    unsigned char target_value;
+    unsigned short i;
+    unsigned char current;
+    
+    target_value = (slot_id & 0xFF) | 0x80;
+    
+    for (i = 0; i < 88; i++) {
+        current = SPRITE_VRAM_TABLE[i] & 0xFF;
+        if (current == target_value || slot_id == 0x80) {
+            SPRITE_VRAM_TABLE[i] = sprite_size;
+        }
+    }
+}
+
+// Test SRAM size by writing test values
+unsigned char test_sram_size(void) {
+    *(volatile unsigned char*)SRAM_SIZE_1_SCRATCH = 0x30;
+    *(volatile unsigned char*)SRAM_SIZE_2_SCRATCH = 0x31;
+    
+    if (*(volatile unsigned char*)SRAM_SIZE_2_SCRATCH == *(volatile unsigned char*)SRAM_SIZE_1_SCRATCH) {
+        return LAST_SRAM_BANK;
+    }
+    
+    *(volatile unsigned char*)SRAM_SIZE_3_SCRATCH = 0x32;
+    if (*(volatile unsigned char*)SRAM_SIZE_3_SCRATCH == *(volatile unsigned char*)SRAM_SIZE_1_SCRATCH) {
+        return LAST_SRAM_BANK;
+    }
+    
+    LAST_SRAM_BANK = 0x32;
+    return LAST_SRAM_BANK;
+}
+
+// Start fade in effect
+void fade_in(unsigned char step, unsigned char delay) {
+    FADE_PARAMETERS.step = step;
+    FADE_PARAMETERS.delay = delay;
+    FADE_DELAY_FRAMES_LEFT = delay;
+}
+
+// Start fade out effect
+void fade_out(unsigned char step, unsigned char delay) {
+    FADE_PARAMETERS.step = (~step) + 1;  // Negate step for fade out
+    FADE_PARAMETERS.delay = delay;
+    FADE_DELAY_FRAMES_LEFT = delay;
+}

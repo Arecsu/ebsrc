@@ -22,9 +22,9 @@ typedef struct {
     SDL_Window* window;
     SDL_Renderer* renderer;
     bool running;
-} GameState;
+} SDLState;
 
-static GameState game_state = {0};
+static SDLState sdl_state = {0};
 
 bool initialize_sdl() {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) < 0) {
@@ -46,37 +46,37 @@ bool initialize_sdl() {
     }
 
     // Create window
-    game_state.window = SDL_CreateWindow("EarthBound",
+    sdl_state.window = SDL_CreateWindow("EarthBound",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         SCREEN_WIDTH * SCALE_FACTOR, SCREEN_HEIGHT * SCALE_FACTOR,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     
-    if (!game_state.window) {
+    if (!sdl_state.window) {
         printf("Window creation failed: %s\n", SDL_GetError());
         return false;
     }
 
     // Create renderer
-    game_state.renderer = SDL_CreateRenderer(game_state.window, -1,
+    sdl_state.renderer = SDL_CreateRenderer(sdl_state.window, -1,
         SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     
-    if (!game_state.renderer) {
+    if (!sdl_state.renderer) {
         printf("Renderer creation failed: %s\n", SDL_GetError());
         return false;
     }
 
-    SDL_RenderSetLogicalSize(game_state.renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SDL_SetRenderDrawColor(game_state.renderer, 0, 0, 0, 255);
+    SDL_RenderSetLogicalSize(sdl_state.renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SDL_SetRenderDrawColor(sdl_state.renderer, 0, 0, 0, 255);
 
     return true;
 }
 
 void cleanup() {
-    if (game_state.renderer) {
-        SDL_DestroyRenderer(game_state.renderer);
+    if (sdl_state.renderer) {
+        SDL_DestroyRenderer(sdl_state.renderer);
     }
-    if (game_state.window) {
-        SDL_DestroyWindow(game_state.window);
+    if (sdl_state.window) {
+        SDL_DestroyWindow(sdl_state.window);
     }
     
     Mix_CloseAudio();
@@ -89,7 +89,7 @@ void handle_events() {
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
             case SDL_QUIT:
-                game_state.running = false;
+                sdl_state.running = false;
                 break;
                 
             case SDL_KEYDOWN:
@@ -107,15 +107,15 @@ void handle_events() {
 void game_loop() {
     // Main game logic will go here
     // For now, just clear the screen
-    SDL_SetRenderDrawColor(game_state.renderer, 32, 64, 128, 255);
-    SDL_RenderClear(game_state.renderer);
+    SDL_SetRenderDrawColor(sdl_state.renderer, 32, 64, 128, 255);
+    SDL_RenderClear(sdl_state.renderer);
     
     // TODO: Call game update functions
     // update_overworld();
     // update_battle();
     // render_game();
     
-    SDL_RenderPresent(game_state.renderer);
+    SDL_RenderPresent(sdl_state.renderer);
 }
 
 int main(int argc, char* argv[]) {
@@ -132,10 +132,10 @@ int main(int argc, char* argv[]) {
     // Initialize game systems
     // TODO: Add proper initialization
     
-    game_state.running = true;
+    sdl_state.running = true;
     
     // Main game loop
-    while (game_state.running) {
+    while (sdl_state.running) {
         handle_events();
         game_loop();
         

@@ -1,6 +1,8 @@
 #ifndef BATTLE_H
 #define BATTLE_H
 
+#include "structs.h"
+
 // Status effect constants
 #define STATUS_0_UNCONSCIOUS 0x00
 #define STATUS_0_COLD 0x01
@@ -98,6 +100,7 @@ void redirect_btlact_level_3_atk(void);
 
 // Forward declarations for external functions
 extern unsigned short twenty_five_percent_variance(unsigned short value);
+extern void apply_condiment(void);
 extern void recover_hp(unsigned char target, unsigned short amount);
 extern void recover_pp(unsigned char target, unsigned short amount);
 extern unsigned short CURRENT_TARGET;
@@ -168,7 +171,11 @@ extern unsigned char ENEMY_CONFIGURATION_TABLE[];
 #define BATTLER_COUNT 32
 
 // Party member IDs 
+#define PARTY_MEMBER_NESS 1
+#define PARTY_MEMBER_PAULA 2
+#define PARTY_MEMBER_JEFF 3
 #define PARTY_MEMBER_POO 4
+#define PARTY_MEMBER_POKEY 5  // NPC party member
 
 // Battle action constants (PSI Shield types)
 #define BATTLE_ACTIONS_PSI_SHIELD_SIGMA 0x15A
@@ -226,5 +233,15 @@ void btlact_solidify(void);
 void btlact_xterminator_spray(void);
 void btlact_pp_recovery_80(void);
 void btlact_super_bomb(void);
+
+// Food and item functions
+void eat_food(void);
+void instant_win_handler(void);
+unsigned short autolifeup(void);
+
+// Utility functions
+void heal_strangeness(void);
+void battle_init_enemy_stats(unsigned short enemy_id, battler* target);
+unsigned short find_targettable_npc(void);
 
 #endif
