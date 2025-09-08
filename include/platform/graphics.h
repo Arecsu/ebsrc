@@ -12,6 +12,10 @@ void graphics_cleanup(void);
 void clear_screen(void);
 void present_screen(void);
 
+// Basic drawing functions for demo
+void draw_rectangle(int x, int y, int w, int h, int r, int g, int b);
+void draw_text_simple(int x, int y, const char* text, int r, int g, int b);
+
 // Sprite/tile rendering (will replace SNES PPU functions)
 void render_sprite(int x, int y, int tile_id, int palette);
 void render_background_tile(int layer, int x, int y, int tile_id);

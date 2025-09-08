@@ -19,32 +19,31 @@ link_directories(${SDL2_LIBRARY_DIRS} ${SDL2_IMAGE_LIBRARY_DIRS} ${SDL2_MIXER_LI
 include_directories(include)
 include_directories(src)
 
-# Source files
-file(GLOB_RECURSE SOURCES
-    "src/*.c"
+# Source files - minimal demo with only essential components
+set(SOURCES
+    "src/main.c"
+    "src/platform/graphics.c"
+    "src/platform/audio.c"
+    "src/platform/input.c"
 )
-
-# Exclude SNES-specific files for now
-list(FILTER SOURCES EXCLUDE REGEX ".*generated.*")
-list(FILTER SOURCES EXCLUDE REGEX ".*spc700.*")
 
 # Create executable
 add_executable(earthbound ${SOURCES})
 
 # Link libraries
-target_link_libraries(earthbound ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
+target_link_libraries(earthbound ${SDL2_LIBRARIES} ${SDL2_IMAGE_LIBRARIES} ${SDL2_MIXER_LIBRARIES} m)
 target_include_directories(earthbound PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS} ${SDL2_MIXER_INCLUDE_DIRS})
 
 # Compiler flags
 target_compile_options(earthbound PRIVATE ${SDL2_CFLAGS_OTHER})
 target_compile_options(earthbound PRIVATE -Wall -Wextra -O2)
 
-# Copy assets directory to build folder
-add_custom_command(TARGET earthbound POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
-    COMMENT "Copying assets to build directory"
-)
+# Copy assets directory to build folder (disabled for minimal demo)
+# add_custom_command(TARGET earthbound POST_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E copy_directory
+#     ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
+#     COMMENT "Copying assets to build directory"
+# )
 
 # Platform-specific settings
 if(APPLE)

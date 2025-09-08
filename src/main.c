@@ -4,11 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 
-// Game headers
-#include "system.h"
-#include "battle.h"
-#include "overworld.h"
+// Game headers - minimal demo
+// #include "system.h"      // Excluded for demo
+// #include "battle.h"      // Excluded for demo
+// #include "overworld.h"   // Excluded for demo
 #include "platform/graphics.h"
 #include "platform/audio.h"
 #include "platform/input.h"
@@ -104,17 +105,78 @@ void handle_events() {
     }
 }
 
-void game_loop() {
-    // Main game logic will go here
-    // For now, just clear the screen
-    SDL_SetRenderDrawColor(sdl_state.renderer, 32, 64, 128, 255);
+// Simple demo variables
+static int demo_frame = 0;
+static float demo_time = 0.0f;
+
+void render_intro_demo() {
+    // Clear screen with a dark blue background
+    SDL_SetRenderDrawColor(sdl_state.renderer, 16, 32, 64, 255);
     SDL_RenderClear(sdl_state.renderer);
     
-    // TODO: Call game update functions
-    // update_overworld();
-    // update_battle();
-    // render_game();
+    // Draw animated background tiles
+    for (int y = 0; y < 28; y++) {
+        for (int x = 0; x < 32; x++) {
+            int tile_id = ((x + y + demo_frame / 10) % 8);
+            render_background_tile(0, x, y, tile_id);
+        }
+    }
     
+    // Draw title text
+    draw_text_simple(60, 50, "EARTHBOUND PC DEMO", 255, 255, 255);
+    draw_text_simple(80, 70, "SDL2 VERSION", 200, 200, 255);
+    
+    // Draw some animated sprites
+    for (int i = 0; i < 4; i++) {
+        int sprite_x = 64 + (int)(40 * sin(demo_time + i * 1.5f));
+        int sprite_y = 120 + (int)(20 * cos(demo_time * 0.7f + i));
+        render_sprite(sprite_x, sprite_y, i, (demo_frame / 20 + i) % 4);
+    }
+    
+    // Draw controls info
+    draw_text_simple(40, 180, "CONTROLS:", 255, 255, 128);
+    draw_text_simple(40, 195, "Z=A  X=B  ARROWS=MOVE", 192, 192, 128);
+    draw_text_simple(40, 210, "PRESS ESC TO QUIT", 255, 128, 128);
+    
+    // Play some demo sounds occasionally
+    if (demo_frame % 120 == 0) {
+        play_sound_effect(1); // Demo sound effect
+    }
+    
+    if (demo_frame % 180 == 0 && demo_frame > 0) {
+        play_music(2); // Demo music track
+    }
+}
+
+void game_loop() {
+    // Update demo state
+    demo_frame++;
+    demo_time = demo_frame * 0.016f; // Approximate 60fps timing
+    
+    // Update input state
+    update_input_state();
+    
+    // Handle game input
+    if (is_button_just_pressed(1, EB_BUTTON_START)) {
+        printf("START button pressed!\n");
+        play_sound_effect(10);
+    }
+    
+    if (is_button_just_pressed(1, EB_BUTTON_A)) {
+        printf("A button pressed!\n");
+        play_sound_effect(5);
+    }
+    
+    // Check for ESC key to quit
+    const Uint8* keystate = SDL_GetKeyboardState(NULL);
+    if (keystate[SDL_SCANCODE_ESCAPE]) {
+        sdl_state.running = false;
+    }
+    
+    // Render the intro demo
+    render_intro_demo();
+    
+    // Present the frame
     SDL_RenderPresent(sdl_state.renderer);
 }
 
@@ -129,8 +191,12 @@ int main(int argc, char* argv[]) {
 
     printf("EarthBound PC - Starting...\n");
     
-    // Initialize game systems
-    // TODO: Add proper initialization
+    // Initialize platform systems
+    graphics_init(sdl_state.renderer);
+    audio_init();
+    input_init();
+    
+    printf("Platform systems initialized\n");
     
     sdl_state.running = true;
     
