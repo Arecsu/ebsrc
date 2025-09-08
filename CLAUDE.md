@@ -1,95 +1,97 @@
-# EarthBound Decompilation Project Guidelines
+# EarthBound PC Build Development Guidelines
 
-## Core Philosophy: Functional Equivalence Over Bit-Identical Reproduction
+## Core Philosophy: Modern Cross-Platform Game Engine
 
-**Primary Goal**: Convert EarthBound's ASM to maintainable, modern C code that behaves identically to the original game but allows for future enhancements and cross-platform ports.
+**Primary Goal**: Convert EarthBound's ASM to maintainable, modern C11 code that creates a cross-platform SDL2-based game executable while preserving the original gameplay experience.
 
 ## Key Principles
 
-- **Functional equivalence** - Same behavior, not bit-identical ROM reproduction  
-- **Modern C practices** - Clean, maintainable code with compiler optimizations enabled
-- **ROM data integrity** - All game assets (text, graphics, audio) come from extracted ROM data
-- **Cross-platform foundation** - Code structure supports future SDL/modern platform ports
-- **Zero compilation warnings** - Strict standards for code quality
-- **Human-readable result** - Simple, well-structured C code without verbose ASM references
+- **Modern C11 practices** - Clean, maintainable code with inline declarations and modern features
+- **SDL2 platform abstraction** - Cross-platform graphics, audio, and input via SDL2
+- **Runtime asset loading** - Game data loaded from files instead of compiled-in
+- **Cross-platform compatibility** - Windows, Linux, and macOS support
+- **Zero compilation warnings** - Strict standards for code quality  
+- **Human-readable result** - Simple, well-structured C code without assembly artifacts
 
 ## Architecture Strategy
 
-### Hybrid Build System
-- **C code**: Flexible placement, allow compiler optimization
-- **ROM data**: Fixed location via .incbin includes for asset integrity  
-- **Memory layout**: Flexible segments for code, fixed segments for hardware requirements only
+### Modern Build System
+- **C11 code**: Modern compiler features and optimizations enabled
+- **SDL2 platform layer**: Graphics, audio, input abstraction
+- **Runtime asset loading**: Game data loaded from extracted ROM files
+- **CMake build system**: Cross-platform compilation and dependency management
 
-### Future Platform Support
-- **SNES target**: CC65 → ld65 → .sfc ROM
-- **Modern platforms**: GCC/Clang → SDL executable (Linux/Windows/Mac/mobile)
-- **Asset management**: Runtime loader for cross-platform compatibility
+### Platform Support  
+- **Primary target**: SDL2 executable (Linux/Windows/macOS)
+- **Asset management**: Runtime loading of graphics, audio, and data files
+- **Input system**: Keyboard and controller support via SDL2
+- **Archive branch**: SNES build preserved in `snes-build-archive` branch
 
 ## ASM to C Conversion Procedure
 
-**PHASE 1 DEVELOPMENT NOTICE**: All current ASM→C conversion work is **Phase 1** development focused on functional SNES ROM builds with `.incbin` data inclusion.
+**PC BUILD FOCUS**: All current ASM→C conversion work targets the modern PC build using C11 and SDL2 platform abstraction.
 
-**📋 IMPORTANT: See `C89_CONVERSION_GUIDE.md` for complete C89 compliance requirements, build system details, and conversion workflow.**
+**📋 IMPORTANT: See `DEVELOPMENT.md` for complete conversion workflow, coding standards, and platform integration guidelines.**
 
-**CRITICAL ASM FILES**: Files with `.critical.asm` extension must NEVER be converted to C - they contain SNES hardware boot code that must remain at fixed addresses (system vectors, reset handlers, etc.)
+**ASM FILE STATUS**: 
+- `.asm` files need conversion to C
+- `.converted.asm` files have been successfully converted
+- `.critical.asm` files contain SNES boot code (archived in `snes-build-archive` branch)
 
-### Hardware-Specific Functions Strategy
+### Hardware Abstraction Strategy
 
-**SNES Hardware Register Functions**: Functions that use SNES hardware registers (multiplication, division, DMA, sound, etc.) should be preserved as assembly for performance and accuracy.
+**SDL2 Platform Layer**: All hardware-specific SNES operations are replaced with SDL2 equivalents for cross-platform compatibility.
 
-**Two Implementation Approaches**:
+**Abstraction Approach**:
 
-### Approach 1: C with Direct Hardware Register Access (PREFERRED)
-For functions using **memory-mapped hardware registers** (multiplication, division, etc.):
+### Graphics Operations
+Replace SNES PPU register access with SDL2 rendering:
 
-1. **Identify hardware register usage**: Look for `f:WRMPYA`, `f:RDMPYL`, `f:WRDIVL`, etc.
-2. **Find register addresses**: Check existing C code or SNES documentation
-3. **Implement in C**: Use `*(volatile type*)address` for register access
-4. **Add timing**: Use `__asm__ ("nop")` for hardware timing requirements
-
-**Example**: Hardware-optimized math functions:
 ```c
-// 16-bit multiplication using SNES hardware multiplier
-unsigned short mult16(unsigned short a, unsigned short b) {
-    unsigned short low_a = a & 0xFF;
-    unsigned short high_a = (a >> 8) & 0xFF;
-    unsigned short result = 0;
-    
-    // Use hardware registers directly
-    *(volatile unsigned char*)0x4202 = low_a;   // WRMPYA
-    *(volatile unsigned char*)0x4203 = (b & 0xFF);  // WRMPYB
-    __asm__ ("nop");  // Wait for hardware
-    result += *(volatile unsigned short*)0x4216; // RDMPYL
-    
-    // Additional multiplications for 16x16...
-    return result;
-}
+// SNES Hardware (OLD - archived)
+*(volatile unsigned char*)0x2100 = brightness_value;
+
+// SDL2 Platform Layer (NEW)
+set_screen_brightness(brightness_value);
 ```
 
-**Hardware Register Addresses**:
-- Multiplication: `0x4202` (WRMPYA), `0x4203` (WRMPYB), `0x4216` (RDMPYL)
-- Division: `0x4204` (WRDIVL), `0x4206` (WRDIVH/WRDIVB), `0x4214` (RDDIVL)
+### Audio Operations  
+Replace SPC700 audio with SDL2_mixer:
 
-### Approach 2: Assembly .s Files (ONLY when needed)
-For functions using **CPU mode operations** that C cannot handle:
+```c
+// SNES Audio (OLD - archived)
+load_spc700_data(bank, address);
 
-1. **Identify CPU operations**: Bank switching (`phb`/`plb`), direct page (`phd`/`pld`)
-2. **Copy original ASM to .s file**: Create `src/filename.s` with EXACT copy  
-3. **Add to Makefile**: Include in `ASM_SRCS`
-4. **Use .export _functionname**: Add leading underscore for CC65 compatibility
-
-**Example**: CPU mode functions like `spc700_transfer.s`:
-```assembly
-.export _spc700_transfer_setup
-.proc _spc700_transfer_setup: near
-    phb         ; Push bank register (no C equivalent)
-    phd         ; Push direct page register
-    ; ... exact original code
-    rts
-.endproc
+// SDL2 Audio (NEW)
+play_music(track_id);
+play_sound_effect(effect_id);
 ```
 
-**IMPORTANT**: Never modify the original ASM logic when copying to .s files - preserve exact functionality including timing, temporary variables, and hardware register access patterns.
+### Input Operations
+Replace joypad register reads with SDL2 input:
+
+```c
+// SNES Input (OLD - archived) 
+unsigned short pad_state = *(volatile unsigned short*)0x4218;
+
+// SDL2 Input (NEW)
+unsigned short pad_state = get_joypad_state(PLAYER_1);
+```
+
+### Mathematical Operations
+Replace SNES hardware math with standard C:
+
+```c
+// SNES Hardware Math (OLD - archived)
+*(volatile unsigned char*)0x4202 = a;   // WRMPYA
+*(volatile unsigned char*)0x4203 = b;   // WRMPYB
+result = *(volatile unsigned short*)0x4216; // RDMPYL
+
+// Standard C Math (NEW)
+result = a * b;  // Let compiler optimize
+```
+
+**Platform Layer Location**: `src/platform/` and `include/platform/`
 
 **IMPORTANT: Always check for existing C implementations before converting new ASM functions to avoid duplicates!**
 
@@ -110,17 +112,17 @@ For functions using **CPU mode operations** that C cannot handle:
    - Add function declaration to appropriate header
    - Mark ASM file as `.converted.asm`
 
-### Conversion Workflow:
-1. `grep -r "BTLACT_FUNCTION_NAME" src/` - Check if already implemented
-2. If found: Review and verify C implementation matches ASM
-3. If not found: Convert ASM → C → Add to header → Test compilation
-4. **Mark ASM file appropriately:**
-   - `.converted.asm` - Successfully converted to C
-   - `.later.asm` - Requires dependencies/complex systems, defer until later  
-   - `.critical.asm` - NEVER convert to C (SNES hardware boot code)
-5. **Test compilation**: `cc65 -t none -O -I include src/file.c -o build/file.s`
+### Modern C Conversion Workflow:
+1. `grep -r "function_name" src/ include/` - Check if already implemented  
+2. If found: Review and modernize C implementation if needed
+3. If not found: Convert ASM → Modern C11 → Add to header → Test compilation
+4. **Replace hardware operations** with SDL2 platform layer calls
+5. **Mark ASM file appropriately:**
+   - `.converted.asm` - Successfully converted to modern C
+   - `.asm` - Still needs conversion
+6. **Test compilation**: `cd build && make`
 
-This procedure prevents duplicate function creation and avoids repeatedly analyzing complex dependencies.
+This procedure prevents duplicate function creation and ensures consistent modern C style.
 
 ## Batch Processing Strategy for High-Volume Conversions
 

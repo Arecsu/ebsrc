@@ -1,4 +1,4 @@
-#pragma code-name ("BANK06")
+// Modern C overworld system
 
 #include "hardware.h"
 #include "overworld.h"

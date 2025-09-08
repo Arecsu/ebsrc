@@ -1,4 +1,4 @@
-#pragma code-name ("BANK02")
+// Modern C audio system
 
 #include "hardware.h"
 #include "audio.h"

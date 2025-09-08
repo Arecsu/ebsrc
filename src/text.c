@@ -1,4 +1,4 @@
-#pragma code-name ("BANK07")
+// Modern C system
 
 #include "hardware.h"
 #include "text.h"

@@ -1,4 +1,4 @@
-#pragma code-name ("BANK08")
+// Modern C system
 
 #include "hardware.h"
 #include "misc.h"

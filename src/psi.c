@@ -1,4 +1,4 @@
-#pragma code-name ("BANK04")
+// Modern C system
 
 #include "hardware.h"
 #include "battle.h"

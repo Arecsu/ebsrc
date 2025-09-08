@@ -1,5 +1,5 @@
 #ifdef __CC65__
-#pragma code-name ("GLOBALS")
+// Modern C system
 #endif
 
 #include "hardware.h"

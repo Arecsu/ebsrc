@@ -1,12 +1,11 @@
-#pragma code-name ("BANK05")
-
+// Modern C inventory system
 #include "hardware.h"
 #include "inventory.h"
 
 // Forward declarations for external functions
 extern unsigned short mult168(unsigned short a, unsigned short b);
 
-// Get item subtype classification (4 categories)
+// Get item subtype classification (4 categories) - modernized
 unsigned short get_item_subtype(unsigned short item_id) {
     unsigned short offset = mult168(item_id, ITEM_CONFIG_SIZE);
     unsigned char item_flags = ITEM_CONFIGURATION_TABLE[offset + ITEM_TYPE_OFFSET];
@@ -23,7 +22,7 @@ unsigned short get_item_subtype(unsigned short item_id) {
     }
 }
 
-// Get item subtype classification variant (3 categories)
+// Get item subtype classification variant (3 categories) - modernized
 unsigned short get_item_subtype_2(unsigned short item_id) {
     unsigned short offset = mult168(item_id, ITEM_CONFIG_SIZE);
     unsigned char item_flags = ITEM_CONFIGURATION_TABLE[offset + ITEM_TYPE_OFFSET];
