@@ -1,6 +1,6 @@
 # EarthBound Decompilation Project
 
-A multi-target decompilation of EarthBound (Mother 2) supporting both SNES ROM builds and modern PC platforms.
+A multi-target decompilation of EarthBound (Mother 2) supporting modern PC platforms.
 
 ## Project Overview
 
