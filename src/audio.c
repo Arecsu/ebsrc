@@ -3,6 +3,9 @@
 #include "hardware.h"
 #include "audio.h"
 
+extern void spc700_transfer_setup(void);
+extern void spc700_transfer_restore(void);
+
 // Forward declarations for external functions
 extern unsigned short unknown_c0ac20(void);
 extern void unknown_c12e42(void);
@@ -207,18 +210,10 @@ void load_spc700_data(unsigned char bank, unsigned short addr) {
     spc_data_ptr_bank = bank;
     y_index = 0;
     
-    // Save current bank and direct page registers
-#ifndef TEST_COMPILATION
-    // TODO: Fix inline assembly for CC65 syntax
-    // __asm__ volatile ("phb");
-    // __asm__ volatile ("phd");
     
-    // Set bank to 0 and direct page to 0  
-    // __asm__ volatile ("pea $0000");
-    // __asm__ volatile ("plb");
-    // __asm__ volatile ("plb");
-    // __asm__ volatile ("pea $0000");
-    // __asm__ volatile ("pld");
+    // Save current bank/direct page and set to 0 (65816-specific)
+#ifndef TEST_COMPILATION
+    spc700_transfer_setup();
 #endif
     
     // Check if SPC700 is ready (should be 0xBBAA)
@@ -304,10 +299,8 @@ void load_spc700_data(unsigned char bank, unsigned short addr) {
     NMITIMEN_MIRROR = nmitimen_backup | 0x80;
     *(volatile unsigned char*)NMITIMEN = NMITIMEN_MIRROR;
     
-    // Restore registers
+    // Restore bank/direct page (65816-specific)
 #ifndef TEST_COMPILATION
-    // TODO: Fix inline assembly for CC65 syntax
-    // __asm__ volatile ("pld");
-    // __asm__ volatile ("plb");
+    spc700_transfer_restore();
 #endif
 }

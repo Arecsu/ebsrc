@@ -59,24 +59,20 @@ Use SNES-appropriate data types:
 
 ### 4. Inline Assembly
 
-CC65 uses different inline assembly syntax than GCC:
+CC65 inline assembly only supports standard 6502 opcodes. 65816-specific instructions (e.g., `phb`, `phd`, `pea`, `plb`) are not supported.
 
-**❌ GCC-style (doesn't work in CC65):**
+Things like `nop` are supported and can be used with `__asm__ ("nop");`
+
+**❌ Incorrect:**
 ```c
-__asm__ volatile ("nop");
+__asm__ ("phb");  // Error: phb is not a valid mnemonic
 ```
 
-**✅ CC65-compatible approaches:**
-```c
-// Option 1: Comment out and add TODO for later implementation
-// TODO: Fix inline assembly for CC65 compatibility
-// __asm__ volatile ("nop");
+**✅ Solution:** Use separate `.s` files with ca65, which fully supports 65816. Example:
+- In C: Call external functions (e.g., `spc700_transfer_setup();`).
+- In `.s`: Define the functions with 65816 code.
 
-// Option 2: Use CC65 inline assembly syntax (research needed)
-// asm("nop");
-
-// Option 3: Create separate .s file for complex assembly
-```
+Consult [cc65 docs](https://www.cc65.org/doc/cc65-9.html) for inline assembly limits.
 
 ### 5. Constants and Macros
 

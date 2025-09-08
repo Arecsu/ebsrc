@@ -44,7 +44,7 @@ extern unsigned char SOUND_EFFECT_QUEUE_END_INDEX;
 extern unsigned char SOUND_EFFECT_UPPER_BIT_FLIPPER;
 extern unsigned char SOUND_EFFECT_QUEUE[8];
 
-// DMA and graphics variables
+// DMA and graphics variables  
 extern unsigned char DMA_QUEUE_INDEX;
 extern unsigned char LAST_COMPLETED_DMA_INDEX;
 extern unsigned char BG2SC_MIRROR;
@@ -132,12 +132,14 @@ extern unsigned char COLOUR_AVERAGE_BLUE;
 // Battle System
 extern unsigned short CURRENT_ATTACKER;
 extern unsigned short CURRENT_TARGET;
+extern unsigned short ITEM_DROPPED;
+extern unsigned char MIRROR_ENEMY;
+extern unsigned char* BATTLE_TARGET_NAME;
+extern unsigned char* BATTLE_ATTACKER_NAME;
+extern unsigned char BATTLE_SPRITES_POINTERS[];
 
 // Audio System
 extern unsigned short CURRENT_MUSIC_TRACK;
-extern unsigned char CURRENT_SEQUENCE_PACK;
-extern unsigned char CURRENT_PRIMARY_SAMPLE_PACK;
-extern unsigned char CURRENT_SECONDARY_SAMPLE_PACK;
 extern unsigned char DISABLE_HPPP_ROLLING;
 extern unsigned char HALF_HPPP_METER_SPEED;
 extern unsigned char SOUND_EFFECT_QUEUE[8];
@@ -225,10 +227,7 @@ typedef struct {
 extern void* SAVE_BASE;
 extern const char* SRAM_SIGNATURE;
 
-// Color system
-extern unsigned short COLOUR_AVERAGE_RED;
-extern unsigned short COLOUR_AVERAGE_GREEN;
-extern unsigned short COLOUR_AVERAGE_BLUE;
+// Color system (declared in hardware section above)
 
 // Forward declarations for external functions
 extern void set_inidisp(unsigned char value);

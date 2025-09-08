@@ -100,11 +100,94 @@ void redirect_btlact_level_3_atk(void);
 extern unsigned short twenty_five_percent_variance(unsigned short value);
 extern void recover_hp(unsigned char target, unsigned short amount);
 extern void recover_pp(unsigned char target, unsigned short amount);
-extern unsigned char CURRENT_TARGET;
+extern unsigned short CURRENT_TARGET;
 extern void call_for_help_common(unsigned short param);
 extern unsigned short fifty_percent_variance(unsigned short value);
+extern void reduce_hp(unsigned char target, unsigned short amount);
+extern void set_hp(unsigned char target, unsigned short amount);
 extern void reduce_pp(unsigned short character_id, unsigned short amount);
+extern void set_pp(unsigned char character_id, unsigned short amount);
+extern unsigned short autohealing(unsigned short status_id, unsigned short status_group);
+extern unsigned short boss_battle_check(void);
 extern void display_text_wait(const char* text, unsigned long param);
+extern void target_all(void);
+extern void target_allies(void);
+extern void target_battler(unsigned short battler_id);
+extern unsigned char success_500(unsigned short value);
+extern unsigned char is_char_targetted(unsigned short battler_index);
+extern void remove_target(unsigned short battler_index);
+extern void remove_dead_targetting(void);
+extern void decrease_offense_16th(unsigned short battler_ptr);
+extern unsigned short return_battle_target_address(void);
+extern void target_all_enemies(void);
+extern unsigned char check_if_valid_target(unsigned short battler_index);
+extern unsigned char get_shield_targetting(unsigned short action);
+extern void swap_attacker_with_target(void);
+extern void fix_attacker_name(unsigned short param);
+extern void fix_target_name(void);
+extern unsigned short miss_calc(unsigned short miss_message);
+extern unsigned short get_battle_sprite_height(unsigned short sprite);
+extern unsigned short count_chars(unsigned short side);
+extern void recover_pp(unsigned char target, unsigned short amount);
+extern unsigned short return_battle_attacker_address(void);
+extern void redirect_btlact_hypnosis_a(void);
+extern void btlact_psi_fire_gamma(void);
+extern void btlact_lifeup_gamma(void);
+extern void psi_fire_common(unsigned short damage);
+extern void lifeup_common(unsigned short amount);
+extern void btlact_hypnosis_a(void);
+extern void btlact_psi_freeze_beta(void);
+extern void btlact_psi_freeze_gamma(void);
+extern void btlact_insecticide_spray(void);
+extern void psi_freeze_common(unsigned short damage);
+extern void psi_thunder_common(unsigned short damage, unsigned short hits);
+extern void insect_spray_common(unsigned short damage);
+extern void bomb_common(unsigned short damage);
+extern unsigned char success_luck80(void);
+
+// Item and enemy structures (basic definitions)
+typedef struct {
+    unsigned char special;
+    // More fields TBD
+} item_parameters;
+
+typedef struct {
+    item_parameters params;
+    // More fields TBD  
+} item;
+
+typedef struct {
+    unsigned char miss_rate;
+    // More fields TBD
+} enemy_data;
+
+// External arrays
+extern unsigned char ENEMY_CONFIGURATION_TABLE[];
+
+// Battle constants
+#define BATTLER_COUNT 32
+
+// Party member IDs 
+#define PARTY_MEMBER_POO 4
+
+// Battle action constants (PSI Shield types)
+#define BATTLE_ACTIONS_PSI_SHIELD_SIGMA 0x15A
+#define BATTLE_ACTIONS_PSI_SHIELD_OMEGA 0x15B  
+#define BATTLE_ACTIONS_PSI_PSI_SHIELD_SIGMA 0x15C
+#define BATTLE_ACTIONS_PSI_PSI_SHIELD_OMEGA 0x15D
+
+// PSI damage/healing constants from config.asm
+#define FIRE_GAMMA_DAMAGE 240
+#define FREEZE_BETA_DAMAGE 360
+#define FREEZE_GAMMA_DAMAGE 540
+#define FREEZE_OMEGA_DAMAGE 720
+#define THUNDER_GAMMA_DAMAGE 120
+#define THUNDER_GAMMA_HITS 3
+#define LIFEUP_GAMMA_HEALING 10000
+
+// Global battle variables
+extern unsigned long BATTLER_TARGET_FLAGS;
+extern unsigned long POWERS_OF_TWO_32BIT[32];
 
 void btlact_double_bash(void);
 void btlact_bomb(void);
@@ -133,5 +216,15 @@ void btlact_null11(void);
 void btlact_level_4_atk(void);
 void btlact_null7(void);
 void btlact_null12(void);
+
+// Additional battle actions
+void btlact_hp_recovery_10000(void);
+void btlact_psi_freeze_omega(void);
+void btlact_psi_thunder_gamma(void);
+void btlact_yogurt_dispenser(void);
+void btlact_solidify(void);
+void btlact_xterminator_spray(void);
+void btlact_pp_recovery_80(void);
+void btlact_super_bomb(void);
 
 #endif

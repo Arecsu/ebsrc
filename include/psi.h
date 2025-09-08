@@ -21,7 +21,7 @@ void flash_inflict_crying(void);
 #define STATUS_GROUP_PERSISTENT_EASYHEAL 0x01
 
 // Forward declarations for external functions
-extern unsigned char CURRENT_TARGET;
+extern unsigned short CURRENT_TARGET;
 extern void display_battle_text_ptr(const unsigned char* msg_ptr);
 extern unsigned short shields_common(unsigned char target, unsigned char shield_type);
 extern unsigned short fail_attack_on_npcs(void);

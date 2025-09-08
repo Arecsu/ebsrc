@@ -129,7 +129,11 @@ typedef struct {
     unsigned char action_item_slot; // Item slot being used in action
     unsigned char guts;          // Current guts stat
     unsigned char base_guts;     // Base guts without equipment
+    unsigned char consciousness; // Whether battler is conscious/active
     // More fields TBD
 } battler;
+
+// Battle system global variables (after struct definition)
+extern battler BATTLERS_TABLE[32];
 
 #endif

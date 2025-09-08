@@ -107,22 +107,61 @@ unsigned short mult8(unsigned char a, unsigned char b) {
     // Use SNES hardware multiplier
     *(volatile unsigned char*)0x4202 = a;  // WRMPYA
     *(volatile unsigned char*)0x4203 = b;  // WRMPYB
-    // TODO: Fix inline assembly for CC65 compatibility
     // Wait for multiplication to complete (2 cycles)
-    // __asm__ volatile ("nop");
-    // __asm__ volatile ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
     return *(volatile unsigned short*)0x4216;  // RDMPYL
 }
 
-// 16-bit multiplication
+// 16-bit multiplication using SNES hardware multiplier (based on mult16.converted.asm)
 unsigned short mult16(unsigned short a, unsigned short b) {
-    return a * b;  // Simple C multiplication for now
+    unsigned short low_a = a & 0xFF;
+    unsigned short high_a = (a >> 8) & 0xFF;
+    unsigned short low_b = b & 0xFF;
+    unsigned short high_b = (b >> 8) & 0xFF;
+    unsigned short result = 0;
+    
+    // First multiplication: low_a * low_b
+    *(volatile unsigned char*)0x4202 = low_a;   // WRMPYA
+    *(volatile unsigned char*)0x4203 = low_b;   // WRMPYB
+    __asm__ ("nop");
+    result += *(volatile unsigned short*)0x4216; // RDMPYL
+    
+    // Second multiplication: low_a * high_b (add shifted result)
+    *(volatile unsigned char*)0x4202 = low_a;   // WRMPYA
+    *(volatile unsigned char*)0x4203 = high_b;  // WRMPYB
+    __asm__ ("nop");
+    result += (*(volatile unsigned short*)0x4216) << 8; // RDMPYL
+    
+    // Third multiplication: high_a * low_b (add shifted result)
+    *(volatile unsigned char*)0x4202 = high_a;  // WRMPYA
+    *(volatile unsigned char*)0x4203 = low_b;   // WRMPYB
+    __asm__ ("nop");
+    result += (*(volatile unsigned short*)0x4216) << 8; // RDMPYL
+    
+    return result;
 }
 
-// 16-bit unsigned division
+// 16-bit unsigned division using SNES hardware divider
 unsigned short division16(unsigned short dividend, unsigned short divisor) {
     if (divisor == 0) return 0;
-    return dividend / divisor;
+    
+    // Use SNES hardware divider  
+    *(volatile unsigned short*)0x4204 = dividend;  // WRDIVL (16-bit)
+    *(volatile unsigned short*)0x4206 = 0;         // WRDIVH (clear high bits)
+    *(volatile unsigned char*)0x4206 = divisor;    // WRDIVB (8-bit divisor)
+    
+    // Wait for division to complete (16 CPU cycles)
+    __asm__ ("nop");
+    __asm__ ("nop"); 
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    
+    return *(volatile unsigned short*)0x4214;      // RDDIVL (result)
 }
 
 // 16-bit signed division
@@ -238,14 +277,58 @@ unsigned long modulus32(unsigned long dividend, unsigned long divisor) {
     return dividend % divisor;
 }
 
-// 32-bit multiplication
+// 32-bit multiplication using hardware-optimized mult16 (based on mult32.converted.asm)
 long mult32(long a, long b) {
-    return a * b;
+    unsigned short a_low = a & 0xFFFF;
+    unsigned short a_high = (a >> 16) & 0xFFFF;
+    unsigned short b_low = b & 0xFFFF;
+    unsigned short b_high = (b >> 16) & 0xFFFF;
+    unsigned long result = 0;
+    
+    // Low * Low (contributes to low 32 bits)
+    result += (unsigned long)mult16(a_low, b_low);
+    
+    // Low * High (contributes to middle 32 bits, shift left 16)
+    result += ((unsigned long)mult16(a_low, b_high)) << 16;
+    
+    // High * Low (contributes to middle 32 bits, shift left 16)  
+    result += ((unsigned long)mult16(a_high, b_low)) << 16;
+    
+    // High * High would be shifted 32 bits, so ignored for 32-bit result
+    
+    return (long)result;
 }
 
-// 16-bit x 8-bit multiplication optimized
+// 16x8 bit multiplication using SNES hardware multiplier (based on mult168.converted.asm)
 unsigned short mult168(unsigned short a, unsigned char b) {
-    return a * b;
+    unsigned short low_a = a & 0xFF;
+    unsigned short high_a = (a >> 8) & 0xFF;
+    unsigned short result;
+    
+    if (high_a == 0) {
+        // Simple case: only low byte multiplication needed
+        *(volatile unsigned char*)0x4202 = low_a;   // WRMPYA
+        *(volatile unsigned char*)0x4203 = b;       // WRMPYB
+        __asm__ ("nop");
+        __asm__ ("nop");
+        return *(volatile unsigned short*)0x4216;   // RDMPYL
+    } else {
+        // Complex case: both high and low bytes present
+        *(volatile unsigned char*)0x4202 = low_a;   // WRMPYA
+        *(volatile unsigned char*)0x4203 = b;       // WRMPYB
+        __asm__ ("nop");
+        __asm__ ("nop");
+        result = *(volatile unsigned short*)0x4216; // RDMPYL
+        
+        // Add high byte contribution
+        *(volatile unsigned char*)0x4202 = high_a;  // WRMPYA
+        *(volatile unsigned char*)0x4203 = b;       // WRMPYB
+        __asm__ ("nop");
+        __asm__ ("nop");
+        result += (*(volatile unsigned short*)0x4216) << 8; // RDMPYL
+        
+        return result;
+    }
 }
 
 // Forward declaration
@@ -550,14 +633,13 @@ unsigned char division8s(char dividend, char divisor) {
     *(volatile unsigned short*)0x4206 = 0;             // WRDIVH (clear high byte)
     *(volatile unsigned char*)0x4206 = abs_divisor;    // WRDIVB
     
-    // TODO: Fix inline assembly for CC65 compatibility
     // Wait for division to complete (16 cycles)
-    // __asm__ volatile ("nop");
-    // __asm__ volatile ("nop");
-    // __asm__ volatile ("nop");
-    // __asm__ volatile ("nop");
-    // __asm__ volatile ("nop");
-    // __asm__ volatile ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
+    __asm__ ("nop");
     
     // Read quotient and remainder  
     quotient = *(volatile unsigned char*)0x4214;  // RDDIVL

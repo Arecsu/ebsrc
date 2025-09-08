@@ -72,6 +72,7 @@ build-c-objects: $(BUILDDIR)
 	@echo "Compiling C source files..."
 	# Core C modules (already converted)
 	# First pass: CC65 C to ASM
+	$(CC) $(CC65FLAGS) --code-name GLOBALS -o "$(BUILDDIR)/globals.s" "$(SRCDIR)/globals.c"
 	$(CC) $(CC65FLAGS) --code-name BANK01 -o "$(BUILDDIR)/battle.s" "$(SRCDIR)/battle.c"
 	$(CC) $(CC65FLAGS) --code-name BANK02 -o "$(BUILDDIR)/audio.s" "$(SRCDIR)/audio.c" 
 	$(CC) $(CC65FLAGS) --code-name BANK03 -o "$(BUILDDIR)/system.s" "$(SRCDIR)/system.c"
@@ -79,6 +80,7 @@ build-c-objects: $(BUILDDIR)
 	$(CC) $(CC65FLAGS) --code-name BANK05 -o "$(BUILDDIR)/inventory.s" "$(SRCDIR)/inventory.c"
 	
 	# Second pass: CA65 ASM to OBJ
+	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/globals.o" "$(BUILDDIR)/globals.s"
 	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/battle.o" "$(BUILDDIR)/battle.s"
 	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/audio.o" "$(BUILDDIR)/audio.s"
 	$(AS) $(CA65FLAGS) -o "$(BUILDDIR)/system.o" "$(BUILDDIR)/system.s"

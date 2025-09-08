@@ -58,11 +58,15 @@ CC65FLAGS = -t none --cpu 65816 -I include -I src --include-dir include
 C_SRCS = $(wildcard src/*.c)
 C_ASMS = $(C_SRCS:.c=.s)
 C_OBJS = $(C_ASMS:.s=.o)
+	
+# Pure assembly source files (for 65816-specific code not supported in cc65 inline asm)
+ASM_SRCS = src/spc700_transfer.s
+ASM_OBJS = $(ASM_SRCS:.s=.o)
 
 # Include C-generated object files in the main build
-USOBJS += $(C_OBJS)
-JPOBJS += $(C_OBJS)
-USPROTOOBJS += $(C_OBJS)
+USOBJS += $(C_OBJS) $(ASM_OBJS)
+JPOBJS += $(C_OBJS) $(ASM_OBJS)
+USPROTOOBJS += $(C_OBJS) $(ASM_OBJS)
 
 $(BUILDDIR)/%.dep: $(SRCDIR)/%.asm
 	@$(call mkdir, $(@D))

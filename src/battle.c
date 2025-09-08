@@ -2,7 +2,10 @@
 
 #include "hardware.h"
 #include "battle.h"
+#include "system.h"
 #include "rom_data.h"
+#include "inventory.h"
+#include <stddef.h>
 
 // Forward declarations for external functions
 extern unsigned short twenty_five_percent_variance(unsigned short value);
@@ -74,8 +77,8 @@ extern void take_item_from_character(unsigned char character, unsigned short ite
 // display_text_wait is declared in battle.h
 extern unsigned short ITEM_DROPPED;
 extern unsigned char MIRROR_ENEMY;
-extern unsigned char CURRENT_TARGET;
-extern unsigned char CURRENT_ATTACKER;
+extern unsigned short CURRENT_TARGET;
+extern unsigned short CURRENT_ATTACKER;
 
 // No need to redefine battler struct - it's in structs.h
 
@@ -1487,3 +1490,676 @@ void btlact_hypnosis_a(void) {
         display_battle_text_ptr(MSG_BTL_KIKANAI);
     }
 }
+
+// Convert ASM function REDUCE_PP
+void reduce_pp(unsigned short character_id, unsigned short amount) {
+    battler* target = get_battler(character_id);
+    unsigned short current_pp = target->pp_target;
+    unsigned short new_pp;
+    
+    // If amount >= current_pp, set to 0, otherwise subtract
+    if (amount >= current_pp) {
+        new_pp = 0;
+    } else {
+        new_pp = current_pp - amount;
+    }
+    
+    set_pp(character_id, new_pp);
+}
+
+// Convert AUTOHEALING function  
+unsigned short autohealing(unsigned short status_id, unsigned short status_group) {
+    unsigned short lowest_hp = 9999;
+    unsigned short target_character = 0;
+    unsigned short i;
+    unsigned short char_index;
+    char_struct* character;
+    
+    // TODO: Need to fix game state party member access
+    // This is a partial conversion - needs proper party iteration
+    for (i = 0; i < 4; i++) {
+        character = &PARTY_CHARACTERS[i];
+        
+        // Check if character has the specified status condition
+        if (character->afflictions[status_group] == status_id) {
+            // Check if this character has lower HP and no unknown flag
+            if (character->current_hp < lowest_hp) {
+                lowest_hp = character->current_hp;
+                target_character = i + 1; // Convert to 1-based index
+            }
+        }
+    }
+    
+    // Mark target for autohealing if found
+    if (target_character != 0) {
+        char_index = target_character - 1;
+        // TODO: Need proper field name for marking autohealing target
+        // PARTY_CHARACTERS[char_index].unknown_flag = 1;
+    }
+    
+    return target_character;
+}
+
+// Convert BOSS_BATTLE_CHECK function
+unsigned short boss_battle_check(void) {
+    unsigned short i;
+    battler* current_battler;
+    
+    // Check all 32 battle slots for boss enemies
+    for (i = 0; i < 32; i++) {
+        current_battler = &BATTLERS_TABLE[i];
+        
+        // Skip if not conscious
+        if (current_battler->consciousness == 0) continue;
+        
+        // Skip if not an enemy (allies are 0, enemies are 1)
+        if (current_battler->ally_or_enemy != 1) continue;
+        
+        // Check if this enemy ID corresponds to a boss
+        // TODO: Need ENEMY_CONFIGURATION_TABLE access
+        // For now, simplified check - just return 0 if we find any enemy
+        // Real implementation would check enemy_data::boss flag
+        return 0; // Boss found - not a regular battle
+    }
+    
+    return 1; // No bosses found - regular battle
+}
+
+// Random variance function - applies ±50% variance to a value
+unsigned short fifty_percent_variance(unsigned short value) {
+    unsigned char rand1, rand2;
+    short offset1, offset2;
+    unsigned char smaller_offset;
+    
+    // Get two random bytes  
+    rand1 = (unsigned char)(rand_long() & 0xFF);
+    rand2 = (unsigned char)(rand_long() & 0xFF);
+    
+    // Convert to signed offsets (-128 to +127)
+    offset1 = (short)rand1 - 128;
+    offset2 = (short)rand2 - 128;
+    
+    // Take absolute values to find smaller offset
+    if (offset1 < 0) offset1 = -offset1;
+    if (offset2 < 0) offset2 = -offset2;
+    
+    // Use the smaller absolute offset
+    smaller_offset = (offset1 < offset2) ? rand2 : rand1;
+    
+    // Apply offset based on direction (sign check against 128)
+    if (smaller_offset < 128) {
+        // Subtract from value
+        if (value > (128 - smaller_offset)) {
+            return value - (128 - smaller_offset);
+        } else {
+            return 0; // Prevent underflow
+        }
+    } else {
+        // Add to value  
+        return value + (smaller_offset - 128);
+    }
+}
+
+// Reduce HP of target battler by specified amount
+void reduce_hp(unsigned char target, unsigned short amount) {
+    unsigned short current_hp;
+    unsigned short new_hp;
+    
+    // Get current HP from battler table
+    current_hp = BATTLERS_TABLE[target].hp_target;
+    
+    // Calculate new HP (prevent underflow)
+    if (amount >= current_hp) {
+        new_hp = 0;
+    } else {
+        new_hp = current_hp - amount;
+    }
+    
+    // Set the new HP value
+    set_hp(target, new_hp);
+}
+
+// Set targeting flags for all conscious battlers
+void target_all(void) {
+    unsigned short i;
+    
+    // Clear target flags
+    BATTLER_TARGET_FLAGS = 0;
+    
+    // Loop through all battlers
+    for (i = 0; i < BATTLER_COUNT; i++) {
+        // Check if battler is conscious (non-zero consciousness field)
+        if (BATTLERS_TABLE[i].consciousness != 0) {
+            // Set bit for this battler using powers of two table
+            BATTLER_TARGET_FLAGS |= POWERS_OF_TWO_32BIT[i];
+        }
+    }
+}
+
+// Set targeting flags for all conscious allied battlers
+void target_allies(void) {
+    unsigned short i;
+    
+    // Clear target flags
+    BATTLER_TARGET_FLAGS = 0;
+    
+    // Loop through all battlers
+    for (i = 0; i < BATTLER_COUNT; i++) {
+        // Check if battler is conscious
+        if (BATTLERS_TABLE[i].consciousness == 0) continue;
+        
+        // Check if battler is an ally (ally_or_enemy == 0) OR is an NPC (npc_id != 0)
+        if (BATTLERS_TABLE[i].ally_or_enemy == 0 || BATTLERS_TABLE[i].npc_id != 0) {
+            // Set bit for this battler using powers of two table
+            BATTLER_TARGET_FLAGS |= POWERS_OF_TWO_32BIT[i];
+        }
+    }
+}
+
+// Set targeting flag for a specific battler
+void target_battler(unsigned short battler_id) {
+    // Set bit for this specific battler using powers of two table
+    BATTLER_TARGET_FLAGS |= POWERS_OF_TWO_32BIT[battler_id];
+}
+
+// Check if attack fails on NPCs - returns 1 if attack should fail
+unsigned char fail_attack_on_npcs(void) {
+    unsigned short target_index;
+    
+    target_index = CURRENT_TARGET;
+    
+    // Check if target is an NPC (npc_id != 0)
+    if (BATTLERS_TABLE[target_index].npc_id != 0) {
+        // Display "It doesn't work" message
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+        return 1; // Attack fails
+    }
+    
+    return 0; // Attack proceeds normally
+}
+
+// Determine if target dodges attack - returns 1 if attack is dodged
+unsigned short determine_dodge(void) {
+    unsigned short target_index;
+    unsigned short speed_diff;
+    
+    target_index = CURRENT_TARGET;
+    
+    // Check if target is paralyzed - cannot dodge
+    if (BATTLERS_TABLE[target_index].afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_PARALYZED) {
+        return 0;
+    }
+    
+    // Check if target is asleep - cannot dodge
+    if (BATTLERS_TABLE[target_index].afflictions[STATUS_GROUP_TEMPORARY] == STATUS_2_ASLEEP) {
+        return 0;
+    }
+    
+    // Check if target is immobilized - cannot dodge
+    if (BATTLERS_TABLE[target_index].afflictions[STATUS_GROUP_TEMPORARY] == STATUS_2_IMMOBILIZED) {
+        return 0;
+    }
+    
+    // Check if target is solidified - cannot dodge
+    if (BATTLERS_TABLE[target_index].afflictions[STATUS_GROUP_TEMPORARY] == STATUS_2_SOLIDIFIED) {
+        return 0;
+    }
+    
+    // Calculate speed difference (target's speed * 2 - attacker's speed)
+    speed_diff = (BATTLERS_TABLE[target_index].speed * 2) - BATTLERS_TABLE[CURRENT_ATTACKER].speed;
+    
+    // If speed difference is negative or zero, cannot dodge
+    if (speed_diff <= 0) {
+        return 0;
+    }
+    
+    // Use success check with speed difference
+    return success_500(speed_diff);
+}
+
+// Success check function - returns 1 if random(500) < value
+unsigned char success_500(unsigned short value) {
+    unsigned short random_val;
+    
+    random_val = rand_limit(500);
+    
+    return (random_val < value) ? 1 : 0;
+}
+
+// Check if a battler is currently targetted - returns 1 if targetted
+unsigned char is_char_targetted(unsigned short battler_index) {
+    unsigned long battler_bit;
+    
+    // Get the bit flag for this battler
+    battler_bit = POWERS_OF_TWO_32BIT[battler_index];
+    
+    // Check if this bit is set in the target flags
+    return ((BATTLER_TARGET_FLAGS & battler_bit) != 0) ? 1 : 0;
+}
+
+// Remove a battler from targeting (clear their bit)
+void remove_target(unsigned short battler_index) {
+    unsigned long battler_bit;
+    
+    // Get the bit flag for this battler
+    battler_bit = POWERS_OF_TWO_32BIT[battler_index];
+    
+    // Clear this bit from the target flags (bitwise AND with inverted bit)
+    BATTLER_TARGET_FLAGS &= ~battler_bit;
+}
+
+// Remove all unconscious battlers from targeting
+void remove_dead_targetting(void) {
+    unsigned short i;
+    
+    for (i = 0; i < BATTLER_COUNT; i++) {
+        // Check if this battler is currently targetted
+        if (is_char_targetted(i)) {
+            // Check if battler is unconscious
+            if (BATTLERS_TABLE[i].afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_UNCONSCIOUS) {
+                // Remove from targeting
+                remove_target(i);
+            }
+        }
+    }
+}
+
+// Decrease offense by 1/16th (hexadecimate - divide by 16)
+void decrease_offense_16th(unsigned short battler_ptr) {
+    unsigned short reduction;
+    unsigned short min_offense;
+    unsigned short* offense_ptr;
+    
+    // Calculate offense pointer
+    offense_ptr = (unsigned short*)((unsigned char*)battler_ptr + offsetof(battler, offense));
+    
+    // Calculate reduction (offense >> 4, minimum 1)
+    reduction = (*offense_ptr) >> 4;
+    if (reduction == 0) {
+        reduction = 1;
+    }
+    
+    // Apply reduction
+    (*offense_ptr) -= reduction;
+    
+    // Calculate minimum allowed offense (base_offense * 3/4)
+    min_offense = (((battler*)battler_ptr)->base_offense * 3) >> 2;
+    
+    // Ensure offense doesn't go below minimum
+    if ((*offense_ptr) < min_offense) {
+        (*offense_ptr) = min_offense;
+    }
+}
+
+// Return pointer to battle target name buffer
+unsigned short return_battle_target_address(void) {
+    return (unsigned short)BATTLE_TARGET_NAME;
+}
+
+// Set targeting flags for all conscious enemy battlers
+void target_all_enemies(void) {
+    unsigned short i;
+    
+    // Clear target flags
+    BATTLER_TARGET_FLAGS = 0;
+    
+    // Loop through all battlers
+    for (i = 0; i < BATTLER_COUNT; i++) {
+        // Check if battler is conscious
+        if (BATTLERS_TABLE[i].consciousness == 0) continue;
+        
+        // Check if battler is an enemy (ally_or_enemy == 1)
+        if (BATTLERS_TABLE[i].ally_or_enemy == 1) {
+            // Set bit for this battler using powers of two table
+            BATTLER_TARGET_FLAGS |= POWERS_OF_TWO_32BIT[i];
+        }
+    }
+}
+
+// Check if battler is a valid target - returns 1 if valid
+unsigned char check_if_valid_target(unsigned short battler_index) {
+    // Check if battler is conscious (non-zero consciousness)
+    if (BATTLERS_TABLE[battler_index].consciousness == 0) {
+        return 0; // Invalid: unconscious
+    }
+    
+    // Check if battler is an NPC (npc_id != 0) - NPCs cannot be targeted
+    if (BATTLERS_TABLE[battler_index].npc_id != 0) {
+        return 0; // Invalid: NPC
+    }
+    
+    // Check if battler is unconscious via status
+    if (BATTLERS_TABLE[battler_index].afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_UNCONSCIOUS) {
+        return 0; // Invalid: unconscious
+    }
+    
+    // Check if battler is diamondized
+    if (BATTLERS_TABLE[battler_index].afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_DIAMONDIZED) {
+        return 0; // Invalid: diamondized
+    }
+    
+    return 1; // Valid target
+}
+
+// Get shield targeting type - returns 1 for single target, 0 for multi-target
+unsigned char get_shield_targetting(unsigned short action) {
+    // Single target shield actions
+    if (action == BATTLE_ACTIONS_PSI_SHIELD_SIGMA ||
+        action == BATTLE_ACTIONS_PSI_SHIELD_OMEGA ||
+        action == BATTLE_ACTIONS_PSI_PSI_SHIELD_SIGMA ||
+        action == BATTLE_ACTIONS_PSI_PSI_SHIELD_OMEGA) {
+        return 1; // Single target
+    }
+    
+    return 0; // Multi-target
+}
+
+// Swap the current attacker and target
+void swap_attacker_with_target(void) {
+    unsigned short temp;
+    
+    // Swap CURRENT_ATTACKER and CURRENT_TARGET
+    temp = CURRENT_ATTACKER;
+    CURRENT_ATTACKER = CURRENT_TARGET;
+    CURRENT_TARGET = temp;
+    
+    // Update name displays
+    fix_attacker_name(0);
+    fix_target_name();
+}
+
+// Calculate miss chance for attacks - returns 1 if attack misses
+unsigned short miss_calc(unsigned short miss_message) {
+    unsigned short miss_chance;
+    unsigned short attacker_index;
+    unsigned short random_val;
+    unsigned short weapon_item_id;
+    unsigned short item_config_offset;
+    
+    attacker_index = CURRENT_ATTACKER;
+    
+    // Check if attacker is a player character (not enemy)
+    if (BATTLERS_TABLE[attacker_index].npc_id == 0 &&
+        BATTLERS_TABLE[attacker_index].ally_or_enemy == 0) {
+        
+        // Get character ID and check for equipped weapon
+        unsigned short char_id = BATTLERS_TABLE[attacker_index].id;
+        if (char_id > 0) {
+            // Calculate character struct offset
+            unsigned short char_offset = mult168(char_id - 1, sizeof(char_struct));
+            
+            // Get equipped weapon slot
+            unsigned char weapon_slot = PARTY_CHARACTERS[char_offset / sizeof(char_struct)].equipment[WEAPON];
+            
+            if (weapon_slot != 0) {
+                // Get weapon item ID from inventory
+                weapon_item_id = PARTY_CHARACTERS[char_offset / sizeof(char_struct)].items[weapon_slot - 1];
+                
+                // Get weapon miss rate from item configuration
+                item_config_offset = mult168(weapon_item_id, sizeof(item));
+                miss_chance = ITEM_CONFIGURATION_TABLE[item_config_offset + offsetof(item, params) + offsetof(item_parameters, special)];
+                
+                // Convert miss rate (subtract 128 and invert bits)
+                miss_chance = (miss_chance - 128) ^ 0xFF80;
+            } else {
+                // No weapon equipped - base miss rate
+                miss_chance = 1;
+            }
+        } else {
+            miss_chance = 1;
+        }
+    } else {
+        // Enemy attacker - get miss rate from enemy configuration
+        unsigned short enemy_offset = mult168(BATTLERS_TABLE[attacker_index].id, sizeof(enemy_data));
+        miss_chance = ENEMY_CONFIGURATION_TABLE[enemy_offset + offsetof(enemy_data, miss_rate)];
+    }
+    
+    // Check for status effects that increase miss rate
+    if (BATTLERS_TABLE[attacker_index].afflictions[STATUS_GROUP_TEMPORARY] == STATUS_2_CRYING ||
+        BATTLERS_TABLE[attacker_index].afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_NAUSEOUS) {
+        miss_chance += 8; // Increase miss chance
+    }
+    
+    // No miss chance means automatic hit
+    if (miss_chance == 0) {
+        return 0;
+    }
+    
+    // Roll random number (1-16) and compare to miss chance
+    random_val = rand_limit(16);
+    if ((miss_chance - 1) < random_val) {
+        return 0; // Hit
+    }
+    
+    // Attack misses - display appropriate message
+    if (miss_message == 0) {
+        display_battle_text_ptr(MSG_BTL_KARABURI);
+    } else {
+        display_battle_text_ptr(MSG_BTL_KARABURI_UTSU);
+    }
+    
+    return 1; // Miss
+}
+
+// Get battle sprite height based on sprite type
+unsigned short get_battle_sprite_height(unsigned short sprite) {
+    unsigned short sprite_data_offset;
+    unsigned char sprite_type;
+    
+    // Calculate offset into sprite pointers table
+    sprite_data_offset = (sprite - 1) * 5 + 4; // (sprite-1)*5 + 4 offset
+    
+    // Get sprite type from battle sprites table
+    sprite_type = BATTLE_SPRITES_POINTERS[sprite_data_offset];
+    
+    // Return height based on sprite type
+    switch (sprite_type) {
+        case 1:
+        case 2:
+            return 4;  // Small sprites
+            
+        case 3:
+        case 4:
+        case 5:
+            return 8;  // Medium sprites
+            
+        case 6:
+            return 16; // Large sprites
+            
+        default:
+            return 0;  // Unknown/invalid
+    }
+}
+
+// Count conscious characters on specific side (0=allies, 1=enemies)
+unsigned short count_chars(unsigned short side) {
+    unsigned short count;
+    unsigned short i;
+    
+    count = 0;
+    
+    // Loop through all 32 battlers (#$0020 in ASM)
+    for (i = 0; i < BATTLER_COUNT; i++) {
+        // Check if conscious
+        if (BATTLERS_TABLE[i].consciousness == 0) continue;
+        
+        // Check if on correct side
+        if (BATTLERS_TABLE[i].ally_or_enemy != side) continue;
+        
+        // Check if not an NPC
+        if (BATTLERS_TABLE[i].npc_id != 0) continue;
+        
+        // Check afflictions - skip unconscious or diamondized
+        if (BATTLERS_TABLE[i].afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_UNCONSCIOUS) continue;
+        if (BATTLERS_TABLE[i].afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_DIAMONDIZED) continue;
+        
+        count++;
+    }
+    
+    return count;
+}
+
+// Recover PP for target battler
+void recover_pp(unsigned char target, unsigned short amount) {
+    unsigned short current_pp;
+    unsigned short max_pp;
+    unsigned short recovered_amount;
+    
+    // Check if battler is conscious and not unconscious
+    if (BATTLERS_TABLE[target].consciousness != 1) return;
+    if (BATTLERS_TABLE[target].afflictions[STATUS_GROUP_PERSISTENT_EASYHEAL] == STATUS_0_UNCONSCIOUS) return;
+    
+    // Get current and max PP
+    current_pp = BATTLERS_TABLE[target].pp_target;
+    max_pp = BATTLERS_TABLE[target].pp_max;
+    
+    // Calculate recovery amount - don't exceed max
+    if (current_pp + amount >= max_pp) {
+        recovered_amount = max_pp - current_pp;
+    } else {
+        recovered_amount = amount;
+    }
+    
+    // Set new PP value
+    set_pp(target, current_pp + amount);
+    
+    // Display recovery message
+    display_text_wait((const char*)MSG_BTL_PP_KAIFUKU, (unsigned long)recovered_amount);
+}
+
+// Return pointer to battle attacker name buffer
+unsigned short return_battle_attacker_address(void) {
+    return (unsigned short)BATTLE_ATTACKER_NAME;
+}
+
+// Redirect to hypnosis alpha action
+void redirect_btlact_hypnosis_a(void) {
+    btlact_hypnosis_a();
+}
+
+// PSI Fire Gamma battle action
+void btlact_psi_fire_gamma(void) {
+    psi_fire_common(FIRE_GAMMA_DAMAGE);
+}
+
+// Lifeup Gamma battle action  
+void btlact_lifeup_gamma(void) {
+    lifeup_common(LIFEUP_GAMMA_HEALING);
+}
+
+// PSI Freeze Beta battle action
+void btlact_psi_freeze_beta(void) {
+    psi_freeze_common(FREEZE_BETA_DAMAGE);
+}
+
+// PSI Freeze Gamma battle action
+void btlact_psi_freeze_gamma(void) {
+    psi_freeze_common(FREEZE_GAMMA_DAMAGE);
+}
+
+// Insecticide spray battle action (100 damage)
+void btlact_insecticide_spray(void) {
+    insect_spray_common(100);
+}
+
+// Twenty-five percent variance calculation
+unsigned short twenty_five_percent_variance(unsigned short value) {
+    unsigned char rand1, rand2;
+    signed char diff1, diff2;
+    unsigned char abs_diff1, abs_diff2;
+    unsigned short result;
+    unsigned char variance;
+    
+    // Generate two random bytes
+    rand1 = rand_long() & 0xFF;
+    rand2 = rand_long() & 0xFF;
+    
+    // Convert to signed differences from 128
+    diff1 = (signed char)(rand1 - 128);
+    diff2 = (signed char)(rand2 - 128);
+    
+    // Get absolute values
+    abs_diff1 = (diff1 < 0) ? -diff1 : diff1;
+    abs_diff2 = (diff2 < 0) ? -diff2 : diff2;
+    
+    // Use the smaller absolute difference
+    if (abs_diff1 <= abs_diff2) {
+        variance = abs_diff1;
+        // If original rand1 was < 128, subtract; if >= 128, add
+        if (rand1 < 128) {
+            result = value - (variance >> 1); // /2 for 25% vs 50%
+        } else {
+            result = value + (variance >> 1);
+        }
+    } else {
+        variance = abs_diff2;
+        // If original rand2 was < 128, subtract; if >= 128, add  
+        if (rand2 < 128) {
+            result = value - (variance >> 1);
+        } else {
+            result = value + (variance >> 1);
+        }
+    }
+    
+    return result;
+}
+
+// Common lifeup healing function with 25% variance
+void lifeup_common(unsigned short healing_amount) {
+    unsigned short varied_amount;
+    
+    // Apply 25% variance to healing amount
+    varied_amount = twenty_five_percent_variance(healing_amount);
+    
+    // Recover HP for current target
+    recover_hp(CURRENT_TARGET, varied_amount);
+}
+
+// PSI Freeze Omega battle action
+void btlact_psi_freeze_omega(void) {
+    psi_freeze_common(FREEZE_OMEGA_DAMAGE);
+}
+
+// PSI Thunder Gamma battle action
+void btlact_psi_thunder_gamma(void) {
+    psi_thunder_common(THUNDER_GAMMA_DAMAGE, THUNDER_GAMMA_HITS);
+}
+
+// Yogurt Dispenser - random 1-4 damage with speed success check
+void btlact_yogurt_dispenser(void) {
+    unsigned short damage;
+    
+    if (success_speed(250)) {
+        // Random 1-4 damage, 255 resistance means no elemental resistance
+        damage = rand_limit(4) + 1;
+        calc_resist_damage(damage, 255);
+    } else {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+    }
+}
+
+// Solidify status effect attack
+void btlact_solidify(void) {
+    if (fail_attack_on_npcs()) {
+        return;
+    }
+    
+    if (success_luck80()) {
+        if (inflict_status_battle(CURRENT_TARGET, STATUS_GROUP_TEMPORARY, STATUS_2_SOLIDIFIED)) {
+            display_battle_text_ptr(MSG_BTL_KOORI_ON);
+        }
+    } else {
+        display_battle_text_ptr(MSG_BTL_KIKANAI);
+    }
+}
+
+// Xterminator Spray - 200 damage to insects
+void btlact_xterminator_spray(void) {
+    insect_spray_common(200);
+}
+
+// Super Bomb - 270 damage
+void btlact_super_bomb(void) {
+    bomb_common(270);
+}
+
